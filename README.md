@@ -1,4 +1,5 @@
 # PROJECT
+Hi, this repository contains projects for DevSphere team in SECR3104-01 APPLICATIONS DEVELOPMENT project
 # TEAM MEMBERS
 1. QUAH ZHEN YEE A24CS5062
 2. YOONG KAH QUAN A24CS0215
