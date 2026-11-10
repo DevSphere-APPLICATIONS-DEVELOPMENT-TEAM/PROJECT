@@ -8,6 +8,8 @@ app.use(cors());
 app.use(express.json());
 app.use('/api/auth', require('./routes/auth'));
 
+app.use('/api/driver-applications', require('./routes/driverApplications'));
+
 app.get('/', (req, res) => {
   res.send('Carpool API is running');
 });
