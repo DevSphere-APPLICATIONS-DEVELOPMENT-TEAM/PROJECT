@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { API_URL } from "../constants/api";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -20,13 +21,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  const showMessage = (title: string, message: string) => {
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  }; 
   const handleLogin = () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Please enter your email and password.");
+      Alert.alert("Error", "Please enter your email and password correctly.");
       return;
     }
 
-    // Backend login API will be connected later.
     Alert.alert("Login", "Login API is not connected yet.");
   };
 
