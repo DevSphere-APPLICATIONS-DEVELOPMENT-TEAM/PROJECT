@@ -12,40 +12,144 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { API_URL } from "../constants/api";
+
+type FormErrors = {
+  name?: string;
+  matricNumber?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  confirmPassword?: string;
+  form?: string;
+};
 
 export default function RegisterScreen() {
   const router = useRouter();
 
+  const [name, setName] = useState("");
+  const [matricNumber, setMatricNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
-  const handleRegister = () => {
-    if (!email.trim() || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields.");
+  const showFieldError = (field: keyof FormErrors, message?: string) => {
+    setErrors((prev) => ({
+      ...prev,
+      [field]: message,
+    }));
+  };
+
+  const handleRegister = async () => {
+    const newErrors: FormErrors = {};
+
+    // Validate full name
+    if (!name.trim()) {
+      newErrors.name = "Full name is required.";
+    }
+
+    // Validate matric number
+    if (!matricNumber.trim()) {
+      newErrors.matricNumber = "Matric number is required.";
+    }
+
+    // Validate email
+    if (!email.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = "Please enter a valid email address.";
+    }
+
+    // Validate phone
+    if (!phone.trim()) {
+      newErrors.phone = "Phone number is required.";
+    }
+
+    // Validate password
+    if (!password) {
+      newErrors.password = "Password is required.";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters.";
+    }
+
+    // Validate confirm password
+    if (!confirmPassword) {
+      newErrors.confirmPassword = "Please confirm your password.";
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = "Passwords do not match.";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      Alert.alert("Error", "Please enter a valid email.");
-      return;
-    }
+    try {
+      setLoading(true);
 
-    if (password.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters.");
-      return;
-    }
+      const response = await fetch(`${API_URL}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: name.trim(),
+          matricNumber: matricNumber.trim(),
+          email: email.trim().toLowerCase(),
+          phone: phone.trim(),
+          password,
+        }),
+      });
 
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
-      return;
-    }
+      const data: { message?: string } = await response
+        .json()
+        .catch(() => ({}));
 
-    // Backend registration API will be connected later.
-    Alert.alert("Success", "Registration API is not connected yet.");
+      if (!response.ok) {
+        const message = data.message || "Registration failed.";
+
+        if (
+          message.toLowerCase().includes("already") ||
+          message.toLowerCase().includes("email")
+        ) {
+          showFieldError("email", message);
+        } else {
+          showFieldError("form", message);
+        }
+
+        return;
+      }
+
+      if (Platform.OS === "web") {
+        window.alert("Registration successful! You can now log in.");
+        router.replace("/login");
+      } else {
+        Alert.alert(
+          "Success",
+          "Your account has been created successfully.",
+          [
+            {
+              text: "Login",
+              onPress: () => router.replace("/login"),
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      showFieldError(
+        "form",
+        "Unable to connect to the server. Please check your connection."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -60,7 +164,6 @@ export default function RegisterScreen() {
       >
         <View style={styles.heading}>
           <Text style={styles.title}>Create Account</Text>
-
           <Text style={styles.subtitle}>
             Create an account so you can{"\n"}
             explore all the features
@@ -68,31 +171,97 @@ export default function RegisterScreen() {
         </View>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
-
+          {/* Full Name */}
+          <Text style={styles.label}>Full Name</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.name && styles.inputError]}
+            placeholder="Enter your full name"
+            placeholderTextColor="#B8A99F"
+            value={name}
+            onChangeText={(value) => {
+              setName(value);
+              showFieldError("name");
+            }}
+          />
+          {errors.name && (
+            <Text style={styles.errorText}>{errors.name}</Text>
+          )}
+
+          {/* Matric Number */}
+          <Text style={styles.label}>Matric Number</Text>
+          <TextInput
+            style={[
+              styles.input,
+              errors.matricNumber && styles.inputError,
+            ]}
+            placeholder="Enter your matric number"
+            placeholderTextColor="#B8A99F"
+            autoCapitalize="characters"
+            value={matricNumber}
+            onChangeText={(value) => {
+              setMatricNumber(value);
+              showFieldError("matricNumber");
+            }}
+          />
+          {errors.matricNumber && (
+            <Text style={styles.errorText}>{errors.matricNumber}</Text>
+          )}
+
+          {/* Email */}
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={[styles.input, errors.email && styles.inputError]}
             placeholder="Enter your email"
             placeholderTextColor="#B8A99F"
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) => {
+              setEmail(value);
+              showFieldError("email");
+            }}
           />
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
 
+          {/* Phone Number */}
+          <Text style={styles.label}>Phone Number</Text>
+          <TextInput
+            style={[styles.input, errors.phone && styles.inputError]}
+            placeholder="Enter your phone number"
+            placeholderTextColor="#B8A99F"
+            keyboardType="phone-pad"
+            value={phone}
+            onChangeText={(value) => {
+              setPhone(value);
+              showFieldError("phone");
+            }}
+          />
+          {errors.phone && (
+            <Text style={styles.errorText}>{errors.phone}</Text>
+          )}
+
+          {/* Password */}
           <Text style={styles.label}>Password</Text>
-
-          <View style={styles.passwordBox}>
+          <View
+            style={[
+              styles.passwordBox,
+              errors.password && styles.inputError,
+            ]}
+          >
             <TextInput
               style={styles.passwordInput}
               placeholder="Enter your password"
               placeholderTextColor="#B8A99F"
               secureTextEntry={!showPassword}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                showFieldError("password");
+              }}
             />
-
             <TouchableOpacity
               onPress={() => setShowPassword(!showPassword)}
             >
@@ -101,19 +270,29 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          {errors.password && (
+            <Text style={styles.errorText}>{errors.password}</Text>
+          )}
 
+          {/* Confirm Password */}
           <Text style={styles.label}>Confirm Password</Text>
-
-          <View style={styles.passwordBox}>
+          <View
+            style={[
+              styles.passwordBox,
+              errors.confirmPassword && styles.inputError,
+            ]}
+          >
             <TextInput
               style={styles.passwordInput}
-              placeholder="Enter your password"
+              placeholder="Confirm your password"
               placeholderTextColor="#B8A99F"
               secureTextEntry={!showConfirmPassword}
               value={confirmPassword}
-              onChangeText={setConfirmPassword}
+              onChangeText={(value) => {
+                setConfirmPassword(value);
+                showFieldError("confirmPassword");
+              }}
             />
-
             <TouchableOpacity
               onPress={() =>
                 setShowConfirmPassword(!showConfirmPassword)
@@ -124,13 +303,28 @@ export default function RegisterScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          {errors.confirmPassword && (
+            <Text style={styles.errorText}>
+              {errors.confirmPassword}
+            </Text>
+          )}
 
+          {/* Backend Error */}
+          {errors.form && (
+            <Text style={styles.errorText}>{errors.form}</Text>
+          )}
+
+          {/* Register Button */}
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[
+              styles.primaryButton,
+              loading && { opacity: 0.6 },
+            ]}
             onPress={handleRegister}
+            disabled={loading}
           >
             <Text style={styles.primaryButtonText}>
-              Sign Up
+              {loading ? "Creating Account..." : "Sign Up"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -139,10 +333,7 @@ export default function RegisterScreen() {
           <Text style={styles.footerText}>
             Already have an account?{" "}
           </Text>
-
-          <TouchableOpacity
-            onPress={() => router.push("/login")}
-          >
+          <TouchableOpacity onPress={() => router.push("/login")}>
             <Text style={styles.footerLink}>Login</Text>
           </TouchableOpacity>
         </View>
@@ -159,7 +350,7 @@ const styles = StyleSheet.create({
   content: {
     flexGrow: 1,
     paddingHorizontal: 32,
-    paddingTop: 128,
+    paddingTop: 100,
     paddingBottom: 42,
   },
   heading: {
@@ -213,6 +404,16 @@ const styles = StyleSheet.create({
     color: "#82766F",
     fontSize: 17,
   },
+  inputError: {
+    borderWidth: 1,
+    borderColor: "#DC2626",
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 10,
+    marginTop: 5,
+    marginLeft: 2,
+  },
   primaryButton: {
     height: 43,
     borderRadius: 8,
@@ -231,7 +432,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: "auto",
-    paddingTop: 90,
+    paddingTop: 50,
   },
   footerText: {
     color: "#51443D",
