@@ -14,12 +14,18 @@ import {
 import { useRouter } from "expo-router";
 import { API_URL } from "../constants/api";
 
+type FormErrors = {
+  email?: string;
+  password?: string;
+};
+
 export default function LoginScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const showMessage = (title: string, message: string) => {
     if (Platform.OS === "web") {
@@ -28,13 +34,52 @@ export default function LoginScreen() {
       Alert.alert(title, message);
     }
   }; 
-  const handleLogin = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert("Error", "Please enter your email and password correctly.");
-      return;
+  const handleLogin = async () => {
+  const newErrors: FormErrors = {};
+
+    if (!email.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      newErrors.email = "Please enter a valid email address.";
     }
 
-    Alert.alert("Login", "Login API is not connected yet.");
+    if (!password) {
+      newErrors.password = "Password is required.";
+    } else if (password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters.";
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) return;
+
+    try {
+      const response = await fetch(`${API_URL}/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage("Login Failed", data.message || "Invalid email or password.");
+        return;
+      }
+
+      router.replace({
+        pathname: "/dashboard",
+        params: { username: data.user.name },
+      });
+
+      } catch (error) {
+        showMessage("Connection Error", "Unable to connect to the server.");
+      }
   };
 
   return (
@@ -65,6 +110,11 @@ export default function LoginScreen() {
             value={email}
             onChangeText={setEmail}
           />
+          {errors.email && (
+            <Text style={{ color: "red", fontSize: 11, marginTop: 4 }}>
+              {errors.email}
+            </Text>
+          )}
 
           <Text style={styles.label}>Password</Text>
 
@@ -86,6 +136,12 @@ export default function LoginScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+          
+          {errors.password && (
+              <Text style={{ color: "red", fontSize: 11, marginTop: 4 }}>
+                {errors.password}
+              </Text>
+            )}
 
           <TouchableOpacity
             style={styles.forgotButton}
