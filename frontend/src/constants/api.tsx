@@ -1,0 +1,1 @@
+export const API_URL = "http://192.168.56.1:5000/api/auth"; //replace the ip address with your local ip address 
