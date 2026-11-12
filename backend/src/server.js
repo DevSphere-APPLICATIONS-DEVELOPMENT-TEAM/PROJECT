@@ -5,6 +5,8 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 
 const authRoutes = require('./routes/authRoutes');
+const driverRoutes = require("./routes/driverRoutes");
+const rideRoutes = require('./routes/rideRoutes');
 
 const app = express();
 
@@ -12,6 +14,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use("/api/drivers", driverRoutes);
+app.use('/api/rides', rideRoutes);
+
 
 app.get('/', (req, res) => {
   res.send('Carpool API is running');

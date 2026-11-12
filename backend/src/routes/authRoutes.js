@@ -1,18 +1,29 @@
-//Express used here
 
 const express = require('express');
 
 const {
   register,
-  login
+  login,
+  getProfile,
+  updateProfile,
+  forgotPassword,
+  verifyResetOTP,
+  resetPassword,
 } = require('../controllers/authController');
+
+const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// POST /api/auth/register
 router.post('/register', register);
-
-// POST /api/auth/login
 router.post('/login', login);
+
+router.get('/profile', authMiddleware, getProfile);
+router.put('/profile', authMiddleware, updateProfile);
+
+// Password Reset
+router.post('/forgot-password', forgotPassword);
+router.post('/verify-reset-otp', verifyResetOTP);
+router.post('/reset-password', resetPassword);
 
 module.exports = router;
