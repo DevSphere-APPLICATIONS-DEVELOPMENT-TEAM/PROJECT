@@ -1,5 +1,5 @@
 
-const API_URL = "http://localhost:5000/api";
+const API_URL = "https://campusride-api-uny3.onrender.com/api";
 
 export const registerUser = async (userData: {
   name: string;
