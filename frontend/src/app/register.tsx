@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { API_URL } from "../constants/api";
+import ActionMessage from "../components/ActionMessage";
 
 type FormErrors = {
   name?: string;
@@ -38,6 +39,11 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const [actionMessage, setActionMessage] = useState("");
+  const [messageType, setMessageType] = useState<
+    "success" | "error" | "info"
+  >("success");
 
   const showFieldError = (field: keyof FormErrors, message?: string) => {
     setErrors((prev) => ({
@@ -94,7 +100,7 @@ export default function RegisterScreen() {
     try {
       setLoading(true);
 
-      const response = await fetch(`${API_URL}/register`, {
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -127,21 +133,12 @@ export default function RegisterScreen() {
         return;
       }
 
-      if (Platform.OS === "web") {
-        window.alert("Registration successful! You can now log in.");
+      setActionMessage("Account created successfully!");
+      setMessageType("success");
+
+      setTimeout(() => {
         router.replace("/login");
-      } else {
-        Alert.alert(
-          "Success",
-          "Your account has been created successfully.",
-          [
-            {
-              text: "Login",
-              onPress: () => router.replace("/login"),
-            },
-          ]
-        );
-      }
+      }, 1500);
     } catch (error) {
       showFieldError(
         "form",
@@ -327,6 +324,11 @@ export default function RegisterScreen() {
               {loading ? "Creating Account..." : "Sign Up"}
             </Text>
           </TouchableOpacity>
+
+          <ActionMessage
+            message={actionMessage}
+            type={messageType}
+          />
         </View>
 
         <View style={styles.footer}>

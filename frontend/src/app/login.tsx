@@ -1,4 +1,4 @@
-
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState } from "react";
 import {
   Alert,
@@ -35,7 +35,7 @@ export default function LoginScreen() {
     }
   }; 
   const handleLogin = async () => {
-  const newErrors: FormErrors = {};
+    const newErrors: FormErrors = {};
 
     if (!email.trim()) {
       newErrors.email = "Email is required.";
@@ -54,7 +54,7 @@ export default function LoginScreen() {
     if (Object.keys(newErrors).length > 0) return;
 
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -72,14 +72,27 @@ export default function LoginScreen() {
         return;
       }
 
-      router.replace({
-        pathname: "/dashboard",
-        params: { username: data.user.name },
-      });
+      console.log("Login user data:", data.user);
 
-      } catch (error) {
-        showMessage("Connection Error", "Unable to connect to the server.");
+      await AsyncStorage.setItem("token", data.token);
+      await AsyncStorage.setItem("user", JSON.stringify(data.user));
+
+      console.log(
+        "Saved user:",
+        await AsyncStorage.getItem("user")
+      );
+      
+      // Navigate according to account role
+      if (data.user.role === "admin") {
+        router.replace("/admin-dashboard");
+      } else {
+        router.replace("/dashboard");
       }
+
+    } catch (error) {
+      console.log("Login error:", error);
+      showMessage("Connection Error", "Unable to connect to the server.");
+    }
   };
 
   return (
@@ -145,9 +158,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={styles.forgotButton}
-            onPress={() =>
-              Alert.alert("Forgot Password", "Coming soon!")
-            }
+            onPress={() => router.push("/forgot-password")}
           >
             <Text style={styles.forgotText}>
               Forgot Password?
