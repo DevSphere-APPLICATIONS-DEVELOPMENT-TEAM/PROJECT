@@ -10,12 +10,11 @@ const userSchema = new mongoose.Schema(
     profilePicture: { type: String, default: null},
     role: { type: String, enum: ['student', 'admin'], default: 'student' },
     isDriver: { type: Boolean, default: false },
-    phoneVerified: { type: Boolean, default: false,},
-    resetOTP: { type: String, default: null,},
-    resetOTPExpiry: { type: Date, default: null,},
-    resetOTPAttempts: { type: Number, default: 0,},
-    resetVerified: { type: Boolean, default: false,},
-    resetVerifiedExpiry: { type: Date, default: null,},},
+    resetOTP: { type: String, default: null },
+    resetOTPExpiry: { type: Date, default: null },
+    resetOTPAttempts: { type: Number, default: 0 },
+    resetVerified: { type: Boolean, default: false },
+  },
   { timestamps: true }
 );
 
