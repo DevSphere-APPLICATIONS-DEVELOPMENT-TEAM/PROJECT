@@ -1,3 +1,4 @@
+
 import React, { useEffect } from "react";
 import {
   View,
@@ -7,16 +8,32 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function StartupScreen() {
   const router = useRouter();
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      router.replace("/login");
-    }, 2500);
+    const checkLogin = async () => {
+      try {
+        // Wait for startup screen
+        await new Promise(resolve => setTimeout(resolve, 2500));
 
-    return () => clearTimeout(timer);
+        // Check saved login token
+        const token = await AsyncStorage.getItem("token");
+
+        if (token) {
+          router.replace("/dashboard");
+        } else {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.log("Startup error:", error);
+        router.replace("/login");
+      }
+    };
+
+    checkLogin();
   }, []);
 
   return (
@@ -26,11 +43,12 @@ export default function StartupScreen() {
         style={styles.logoImage}
         resizeMode="contain"
       />
+
       <Text style={styles.logo}>CampusRide</Text>
 
       <ActivityIndicator
         size="large"
-        color="#FF781F"
+        color="#FFFFFF"
         style={styles.loading}
       />
     </View>
@@ -44,28 +62,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+
   logo: {
     fontSize: 55,
     fontWeight: "bold",
-    color: "#ffffff",
+    color: "#FFFFFF",
     letterSpacing: 2,
   },
+
   logoImage: {
-  width: 200,
-  height: 200,
-  marginBottom: 5,
+    width: 200,
+    height: 200,
+    marginBottom: 5,
   },
-  tagline: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333",
-    marginTop: 10,
-  },
-  description: {
-    fontSize: 14,
-    color: "#777",
-    marginTop: 8,
-  },
+
   loading: {
     marginTop: 45,
   },
