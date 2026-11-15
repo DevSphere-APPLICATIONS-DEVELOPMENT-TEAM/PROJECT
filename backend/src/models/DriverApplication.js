@@ -34,6 +34,8 @@ const driverApplicationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    licencePhoto : { type: String, default : ""},
+    stickerPhoto: { type: String, default : ""},
 
     status: {
       type: String,
