@@ -21,6 +21,9 @@ const submitApplication = async (req, res) => {
       vehicleColor,
       plateNumber,
       licenseNumber,
+
+      licencePhoto,
+        stickerPhoto,
     } = req.body;
 
     if (!vehicleModel || !vehicleColor || !plateNumber || !licenseNumber) {
@@ -44,6 +47,8 @@ const submitApplication = async (req, res) => {
       existingApplication.vehicleColor = vehicleColor;
       existingApplication.plateNumber = plateNumber;
       existingApplication.licenseNumber = licenseNumber;
+      existingApplication.licencePhoto = licencePhoto;
+      existingApplication.stickerPhoto = stickerPhoto; 
       existingApplication.status = "pending";
       existingApplication.adminRemarks = "";
 
@@ -61,13 +66,17 @@ const submitApplication = async (req, res) => {
       vehicleColor,
       plateNumber,
       licenseNumber,
+      licencePhoto,
+      stickerPhoto,
+
     });
 
     return res.status(201).json({
       message: "Driver application submitted successfully.",
       application,
     });
-  } catch (error) {
+  } catch (error) { 
+    console
     console.error("Driver application error:", error);
 
     return res.status(500).json({
@@ -200,7 +209,7 @@ const rejectApplication = async (req, res) => {
       application,
     });
   } catch (error) {
-    console.error("Reject application error:", error);
+    console.error("Unable to reject driver application:", error);
 
     return res.status(500).json({
       message: "Unable to reject driver application.",
