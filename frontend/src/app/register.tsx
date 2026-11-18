@@ -66,10 +66,12 @@ export default function RegisterScreen() {
     }
 
     // Validate email
-    if (!email.trim()) {
+    const emailValue = email.trim().toLowerCase();
+
+    if (!emailValue) {
       newErrors.email = "Email is required.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      newErrors.email = "Please enter a valid email address.";
+    } else if (!/^[^\s@]+@graduate\.utm\.my$/.test(emailValue)) {
+      newErrors.email = "Please use your UTM email (@graduate.utm.my).";
     }
 
     // Validate phone
@@ -208,7 +210,7 @@ export default function RegisterScreen() {
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={[styles.input, errors.email && styles.inputError]}
-            placeholder="Enter your email"
+            placeholder="Enter your email (eg.example@graduate.utm.my) "
             placeholderTextColor="#B8A99F"
             keyboardType="email-address"
             autoCapitalize="none"

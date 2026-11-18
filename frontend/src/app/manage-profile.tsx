@@ -27,7 +27,7 @@ export default function ManageProfile() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [matricNumber, setMatricNumber] = useState("");
-
+  const [gender, setGender] = useState("");
   const [isDriver, setIsDriver] = useState(false);
   const [vehicleModel, setVehicleModel] = useState("");
   const [vehicleColor, setVehicleColor] = useState("");
@@ -37,6 +37,7 @@ export default function ManageProfile() {
   const [errors, setErrors] = useState({
     name: "",
     phone: "",
+    gender: "",
     vehicleModel: "",
     vehicleColor: "",
     plateNumber: "",
@@ -59,6 +60,7 @@ export default function ManageProfile() {
           setName(user.name || "");
           setPhone(user.phone || "");
           setMatricNumber(user.matricNumber || "");
+          setGender(user.gender || "");
           setProfileImage(user.profilePicture || savedImage || null);
         }
 
@@ -136,6 +138,7 @@ export default function ManageProfile() {
     const newErrors = {
       name: "",
       phone: "",
+      gender: "",
       vehicleModel: "",
       vehicleColor: "",
       plateNumber: "",
@@ -196,6 +199,7 @@ export default function ManageProfile() {
       const profileBody: any = {
         name: name.trim(),
         phone: phone.trim(),
+        gender: gender.trim(),
       };
 
       if (photoChanged) {
@@ -266,6 +270,7 @@ export default function ManageProfile() {
         name: name.trim(),
         phone: phone.trim(),
         matricNumber,
+        gender: gender.trim(),
         isDriver: newApplicationStatus === "approved",
       };
 
@@ -412,6 +417,21 @@ export default function ManageProfile() {
         />
         {!!errors.phone && (
           <Text style={styles.errorText}>{errors.phone}</Text>
+        )}
+
+        <Text style={styles.label}>Gender</Text>
+        <TextInput
+          style={[styles.input, errors.gender ? styles.inputError : null]}
+          value={gender}
+          onChangeText={(value) => {
+            setGender(value);
+            setErrors(prev => ({ ...prev, gender: "" }));
+          }}
+          placeholder="Enter your gender"
+          placeholderTextColor="#999"
+        />
+        {!!errors.gender && (
+          <Text style={styles.errorText}>{errors.gender}</Text>
         )}
       </View>
 
