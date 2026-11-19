@@ -420,16 +420,33 @@ export default function ManageProfile() {
         )}
 
         <Text style={styles.label}>Gender</Text>
-        <TextInput
-          style={[styles.input, errors.gender ? styles.inputError : null]}
-          value={gender}
-          onChangeText={(value) => {
-            setGender(value);
-            setErrors(prev => ({ ...prev, gender: "" }));
-          }}
-          placeholder="Enter your gender"
-          placeholderTextColor="#999"
-        />
+
+        <View style={styles.genderContainer}>
+          {["Male", "Female"].map((option) => (
+            <TouchableOpacity
+              key={option}
+              style={[
+                styles.genderOption,
+                gender === option && styles.genderOptionSelected,
+                errors.gender ? styles.inputError : null,
+              ]}
+              onPress={() => {
+                setGender(option);
+                setErrors(prev => ({ ...prev, gender: "" }));
+              }}
+            >
+              <Text
+                style={[
+                  styles.genderText,
+                  gender === option && styles.genderTextSelected,
+                ]}
+              >
+                {option}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {!!errors.gender && (
           <Text style={styles.errorText}>{errors.gender}</Text>
         )}
@@ -732,6 +749,35 @@ const styles = StyleSheet.create({
     marginTop: -8,
     marginBottom: 5,
     paddingRight: 10,
+  },
+  genderContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+
+  genderOption: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#F0D6C4",
+    borderRadius: 9,
+    paddingVertical: 13,
+    alignItems: "center",
+  },
+
+  genderOptionSelected: {
+    backgroundColor: "#FF781F",
+    borderColor: "#FF781F",
+  },
+
+  genderText: {
+    color: "#555",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  genderTextSelected: {
+    color: "#FFFFFF",
   },
   passengerNote: {
     backgroundColor: "#FFF0E4",
