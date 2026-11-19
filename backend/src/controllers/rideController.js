@@ -93,6 +93,39 @@ const getApprovedRides = async (req, res) => {
   }
 };
 
+// Passenger views ride and driver details
+const getRideDetails = async (req, res) => {
+  try {
+    const ride = await Ride.findOne({
+      _id: req.params.id,
+      status: 'approved',
+    }).populate(
+      'driverId',
+      'name matricNumber gender profilePicture'
+    );
+
+    if (!ride) {
+      return res.status(404).json({
+        message: 'Ride not found or no longer available.',
+      });
+    }
+
+    const driverApplication = await DriverApplication.findOne({
+      userId: ride.driverId._id,
+      status: 'approved',
+    }).select('vehicleModel vehicleColor plateNumber status');
+
+    res.status(200).json({
+      ride,
+      driverApplication,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 // Driver views their own rides
 const getMyRides = async (req, res) => {
   try {
@@ -149,6 +182,7 @@ const cancelRide = async (req, res) => {
 module.exports = {
   publishRide,
   getApprovedRides,
+  getRideDetails,
   getMyRides,
   cancelRide,
 };

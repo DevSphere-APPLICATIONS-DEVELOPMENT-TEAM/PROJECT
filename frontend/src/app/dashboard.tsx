@@ -256,6 +256,17 @@ export default function HomeScreen() {
                   </Text>
                 </View>
               </View>
+              
+              <TouchableOpacity
+                onPress={() =>
+                  router.push({
+                    pathname: "/ride-details",
+                    params: { rideId: ride._id },
+                  })
+                }
+              >
+                <Text style={styles.viewDetailsText}>View More Details →</Text>
+              </TouchableOpacity>
 
             </View>
           ))
@@ -460,6 +471,21 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: "#F1E7DB",
+  },
+
+  viewDetailsText: {
+  color: "#F28A24",
+  fontSize: 13,
+  fontWeight: "bold",
+  textAlign: "right",
+  marginTop: 15,
+  },  
+  viewDetailsButton: {
+    backgroundColor: "#FFF0DD",
+    padding: 12,
+    borderRadius: 9,
+    alignItems: "center",
+    marginTop: 15,
   },
 
   driverRow: {

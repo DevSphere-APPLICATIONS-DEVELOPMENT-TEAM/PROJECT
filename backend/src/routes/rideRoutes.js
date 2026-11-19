@@ -7,6 +7,7 @@ const authMiddleware = require('../middleware/authMiddleware');
 const {
   publishRide,
   getApprovedRides,
+  getRideDetails,
   getMyRides,
   cancelRide,
 } = require('../controllers/rideController');
@@ -16,6 +17,9 @@ router.post('/', authMiddleware, publishRide);
 
 // Passengers view available rides
 router.get('/approved', authMiddleware, getApprovedRides);
+
+// Passenger views ride details
+router.get('/:id', authMiddleware, getRideDetails);
 
 // Driver views their own rides
 router.get('/my-rides', authMiddleware, getMyRides);
