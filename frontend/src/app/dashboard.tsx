@@ -1,4 +1,3 @@
-
 import React, { useCallback, useState } from "react";
 import {
   View,
@@ -13,6 +12,7 @@ import {
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NavBar from "../components/NavBar";
+import CampusMapPicker from "../components/CampusMapPicker";
 import { API_URL } from "../constants/api";
 
 type Ride = {
@@ -35,6 +35,8 @@ export default function HomeScreen() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [destination, setDestination] = useState("");
+  const [showMap, setShowMap] = useState(false);
 
   const comingSoon = (feature: string) => {
     Alert.alert(feature, "This feature will be available in Sprint 2.");
@@ -133,7 +135,7 @@ export default function HomeScreen() {
               style={styles.locationIcon}
               resizeMode="contain"
             />
-            <Text style={styles.locationText}>Destination</Text>
+            <Text style={styles.locationText}>{destination || "Destination"}</Text>
           </View>
 
           <TouchableOpacity
@@ -143,6 +145,24 @@ export default function HomeScreen() {
             <Text style={styles.findButtonText}>Find a Ride</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.mapToggle}
+          onPress={() => setShowMap(!showMap)}
+        >
+          <Text style={styles.mapToggleText}>
+            {showMap ? "Hide campus map" : "Pick destination on map"}
+          </Text>
+        </TouchableOpacity>
+
+        {showMap && (
+          <CampusMapPicker
+            onSelect={(code) => {
+              setDestination(code);
+              setShowMap(false);
+            }}
+          />
+        )}
 
         {/* Available Rides */}
         <View style={styles.rideHeader}>
@@ -373,6 +393,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "bold",
   },
+
+  mapToggle: {
+    marginHorizontal: 20,
+    marginBottom: 15,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F28A24",
+  },
+
+  mapToggleText: { color: "#F28A24", fontWeight: "bold", fontSize: 14 },
 
   rideHeader: {
     flexDirection: "row",
