@@ -112,12 +112,21 @@ const getRideDetails = async (req, res) => {
 
     const driverApplication = await DriverApplication.findOne({
       userId: ride.driverId._id,
-      status: 'approved',
-    }).select('vehicleModel vehicleColor plateNumber status');
+    });
+
+    if (!driverApplication) {
+      return res.status(404).json({
+        message: 'Driver application not found.',
+      });
+    }
 
     res.status(200).json({
       ride,
-      driverApplication,
+      driverApplication: {
+        vehicleModel: driverApplication.vehicleModel,
+        vehicleColor: driverApplication.vehicleColor,
+        plateNumber: driverApplication.plateNumber,
+      },
     });
   } catch (error) {
     res.status(500).json({

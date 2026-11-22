@@ -8,12 +8,11 @@ import {
   TouchableOpacity,
   Alert,
   Image,
-  Platform,
-  Modal,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NavBar from "../components/NavBar";
+import BackButton from "../components/BackButton";
 import LogoutButton from "../components/LogoutButton";
 
 type User = {
@@ -67,13 +66,9 @@ export default function Profile() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.logo}>🚘 RYDE</Text>
-
-          <TouchableOpacity
-            onPress={() => showComingSoon("Settings")}
-          >
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </TouchableOpacity>
+          <BackButton />
+          <Text style={styles.headerTitle}>My Profile</Text>
+          <View style={{ width: 40 }} />
         </View>
 
         {/* Profile Information */}
@@ -118,7 +113,7 @@ export default function Profile() {
         {/* RYDE Statistics */}
         <View style={styles.statsCard}>
           <Text style={styles.sectionTitle}>
-            📊  My RYDE Statistics
+            📊  My Ride Statistics
           </Text>
 
           <View style={styles.statsRow}>
@@ -185,21 +180,17 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "flex-start",
+    gap: 15,
     marginTop: 40,
     marginBottom: 20,
   },
 
-  logo: {
-    fontSize: 25,
+  headerTitle: {
+    fontSize: 22,
     fontWeight: "bold",
-    color: "#FF781F",
-    fontStyle: "italic",
-  },
-
-  settingsIcon: {
-    fontSize: 24,
+    color: "#000000",
   },
 
   profileCard: {
