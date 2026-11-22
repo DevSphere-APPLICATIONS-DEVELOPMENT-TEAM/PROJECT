@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
@@ -28,6 +29,8 @@ type Application = {
   vehicleColor: string;
   plateNumber: string;
   licenseNumber: string;
+  licencePhoto?: string;
+  stickerPhoto?: string;
   status: string;
 };
 
@@ -197,6 +200,37 @@ export default function AdminDashboard() {
                 License Number: {item.licenseNumber}
               </Text>
 
+              <View style={styles.divider} />
+
+              <Text style={styles.vehicleTitle}>Submitted Documents</Text>
+              <View style={styles.photoRow}>
+                <View style={styles.photoContainer}>
+                  <Text style={styles.photoLabel}>Driving Licence</Text>
+                  {item.licencePhoto ? (
+                    <Image
+                      source={{ uri: item.licencePhoto }}
+                      style={styles.docImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.noPhotoText}>No photo uploaded</Text>
+                  )}
+                </View>
+
+                <View style={styles.photoContainer}>
+                  <Text style={styles.photoLabel}>UTM Car Sticker</Text>
+                  {item.stickerPhoto ? (
+                    <Image
+                      source={{ uri: item.stickerPhoto }}
+                      style={styles.docImage}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <Text style={styles.noPhotoText}>No photo uploaded</Text>
+                  )}
+                </View>
+              </View>
+
               <TextInput
                 style={styles.input}
                 placeholder="Rejection reason (required to reject)"
@@ -338,6 +372,35 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#FFFFFF",
     fontWeight: "bold",
+  },
+  photoRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  photoContainer: {
+    flex: 1,
+  },
+  photoLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#57534E",
+    marginBottom: 4,
+  },
+  docImage: {
+    width: "100%",
+    height: 95,
+    borderRadius: 8,
+    backgroundColor: "#F5F5F4",
+    borderWidth: 1,
+    borderColor: "#E7E5E4",
+  },
+  noPhotoText: {
+    fontSize: 12,
+    color: "#A8A29E",
+    fontStyle: "italic",
+    marginTop: 4,
   },
   logoutButton: {
   backgroundColor: "#292524",
