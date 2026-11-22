@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +26,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
 
   const showMessage = (title: string, message: string) => {
@@ -54,6 +56,7 @@ export default function LoginScreen() {
     if (Object.keys(newErrors).length > 0) return;
 
     try {
+      setLoading(true);
       const response = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: {
@@ -72,15 +75,8 @@ export default function LoginScreen() {
         return;
       }
 
-      console.log("Login user data:", data.user);
-
       await AsyncStorage.setItem("token", data.token);
       await AsyncStorage.setItem("user", JSON.stringify(data.user));
-
-      console.log(
-        "Saved user:",
-        await AsyncStorage.getItem("user")
-      );
       
       // Navigate according to account role
       if (data.user.role === "admin") {
@@ -90,8 +86,9 @@ export default function LoginScreen() {
       }
 
     } catch (error) {
-      console.log("Login error:", error);
       showMessage("Connection Error", "Unable to connect to the server.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -166,12 +163,17 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[styles.primaryButton, loading && { opacity: 0.6 }]}
             onPress={handleLogin}
+            disabled={loading}
           >
-            <Text style={styles.primaryButtonText}>
-              Log In
-            </Text>
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <Text style={styles.primaryButtonText}>
+                Log In
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
 
