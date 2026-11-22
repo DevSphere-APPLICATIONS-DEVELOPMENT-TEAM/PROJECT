@@ -16,6 +16,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import BackButton from "../components/BackButton";
 import { API_URL } from "../constants/api";
+import { Picker } from "@react-native-picker/picker";
 
 export default function ManageProfile() {
   const router = useRouter();
@@ -152,7 +153,9 @@ export default function ManageProfile() {
     if (!phone.trim()) {
       newErrors.phone = "Please enter your phone number.";
     }
-
+    if (!gender) {
+      newErrors.gender = "Please select your gender.";
+}
     // Only validate vehicle details when applying as a driver
     if (
       isDriver &&
@@ -421,31 +424,30 @@ export default function ManageProfile() {
 
         <Text style={styles.label}>Gender</Text>
 
-        <View style={styles.genderContainer}>
-          {["Male", "Female"].map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={[
-                styles.genderOption,
-                gender === option && styles.genderOptionSelected,
-                errors.gender ? styles.inputError : null,
-              ]}
-              onPress={() => {
-                setGender(option);
-                setErrors(prev => ({ ...prev, gender: "" }));
-              }}
-            >
-              <Text
-                style={[
-                  styles.genderText,
-                  gender === option && styles.genderTextSelected,
-                ]}
-              >
-                {option}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View style={[
+          styles.input,
+          errors.gender ? styles.inputError : null,
+          { paddingVertical: 0 },
+        ]}>
+          <Picker
+            selectedValue={gender}
+            onValueChange={(value: string) => {
+              setGender(value);
+              setErrors(prev => ({ ...prev, gender: "" }));
+            }}
+            style={styles.genderPicker}
+          >
+            <Picker.Item label="Select your gender" value="" />
+            <Picker.Item label="Male" value="Male" />
+            <Picker.Item label="Female" value="Female" />
+            <Picker.Item label="Prefer not to say" value="Prefer not to say" />
+          </Picker>
+          
         </View>
+
+        {!!errors.gender && (
+          <Text style={styles.errorText}>{errors.gender}</Text>
+        )}
 
         {!!errors.gender && (
           <Text style={styles.errorText}>{errors.gender}</Text>
@@ -753,6 +755,10 @@ const styles = StyleSheet.create({
   genderContainer: {
     flexDirection: "row",
     gap: 12,
+  },
+  genderPicker: {
+    height: 45,
+    width: "100%",
   },
 
   genderOption: {
