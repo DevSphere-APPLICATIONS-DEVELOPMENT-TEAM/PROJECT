@@ -31,6 +31,7 @@ export default function ForgotPasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const [actionMessage, setActionMessage] = useState("");
@@ -405,27 +406,27 @@ export default function ForgotPasswordScreen() {
 
               <Text style={styles.label}>Confirm Password</Text>
 
-            <View style={styles.passwordBox}>
-            <TextInput
-                style={styles.passwordInput}
-                placeholder="Confirm new password"
-                placeholderTextColor="#B8A99F"
-                secureTextEntry={!showPassword}
-                value={confirmPassword}
-                onChangeText={(value) => {
-                setConfirmPassword(value);
-                setActionMessage("");
-                }}
-            />
+              <View style={styles.passwordBox}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Confirm new password"
+                  placeholderTextColor="#B8A99F"
+                  secureTextEntry={!showConfirmPassword}
+                  value={confirmPassword}
+                  onChangeText={(value) => {
+                    setConfirmPassword(value);
+                    setActionMessage("");
+                  }}
+                />
 
-            <TouchableOpacity
-                onPress={() => setShowPassword(!showPassword)}
-            >
-                <Text style={styles.eye}>
-                {showPassword ? "◎" : "◉"}
-                </Text>
-            </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  <Text style={styles.eye}>
+                    {showConfirmPassword ? "◎" : "◉"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
               <Text style={styles.passwordHint}>
                 Password must contain at least 8 characters.

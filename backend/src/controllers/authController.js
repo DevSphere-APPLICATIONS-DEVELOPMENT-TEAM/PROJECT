@@ -176,7 +176,7 @@ const getProfile = async (req, res) => {
 // UPDATE PROFILE
 const updateProfile = async (req, res) => {
   try {
-    const { name, phone, profilePicture } = req.body;
+    const { name, phone, profilePicture, gender } = req.body;
 
     const updateData = {};
 
@@ -184,6 +184,14 @@ const updateProfile = async (req, res) => {
     if (phone !== undefined) updateData.phone = phone;
     if (profilePicture !== undefined) {
       updateData.profilePicture = profilePicture;
+    }
+    if (gender !== undefined) {
+      const normalizedGender = String(gender).trim().toLowerCase().replace(/\s+/g, '_');
+      if (['male', 'female', 'prefer_not_to_say'].includes(normalizedGender)) {
+        updateData.gender = normalizedGender;
+      } else if (gender === '' || gender === null) {
+        updateData.gender = null;
+      }
     }
 
     const user = await User.findByIdAndUpdate(
