@@ -296,19 +296,35 @@ export default function PublishRide() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Ride Information</Text>
+        <Text style={styles.sectionTitle}>Available Seats</Text>
 
         <View style={styles.inputCard}>
-          <View style={styles.inputRow}>
-            <Text style={styles.inputIcon}>💺</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Available Seats"
-              placeholderTextColor="#999"
-              keyboardType="number-pad"
-              value={seats}
-              onChangeText={setSeats}
-            />
+          <View style={styles.seatRow}>
+            <View style={styles.seatInfo}>
+              <Text style={styles.seatLabel}>Number of passengers</Text>
+            </View>
+
+            <View style={styles.seatButtons}>
+              <TouchableOpacity
+                style={styles.seatButton}
+                onPress={() =>
+                  setSeats(String(Math.max(1, Number(seats) - 1)))
+                }
+              >
+                <Text style={styles.seatButtonText}>−</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.seatNumber}>{seats}</Text>
+              
+              <TouchableOpacity
+                style={styles.seatButton}
+                onPress={() =>
+                  setSeats(String(Number(seats) + 1))
+                }
+              >
+                <Text style={styles.seatButtonText}>+</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -483,7 +499,49 @@ const styles = StyleSheet.create({
     backgroundColor: "#E5DCD6",
     marginLeft: 9,
   },
+  seatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    height: 35,
+  },
 
+  seatInfo: {
+    flex: 1,
+  },
+
+  seatLabel: {
+    fontSize: 12,
+    color: "#999",
+  },
+
+  seatNumber: {
+    fontSize: 17,
+    fontWeight: "bold",
+    color: "#333",
+    marginTop: 4,
+  },
+
+  seatButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 15,
+  },
+
+  seatButton: {
+    width: 25,
+    height: 25,
+    borderRadius: 8,
+    backgroundColor: "#FFF0E5",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  seatButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FF781F",
+  },
   costCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
@@ -493,7 +551,7 @@ const styles = StyleSheet.create({
   },
 
   costLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: "#999",
   },
 
