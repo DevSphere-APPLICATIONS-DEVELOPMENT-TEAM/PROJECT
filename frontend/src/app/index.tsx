@@ -61,6 +61,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FF781F",
     justifyContent: "center",
     alignItems: "center",
+    
   },
 
   logo: {
