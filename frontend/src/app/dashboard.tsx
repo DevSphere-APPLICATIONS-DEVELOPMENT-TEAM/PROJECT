@@ -14,6 +14,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NavBar from "../components/NavBar";
 import CampusMapPicker from "../components/CampusMapPicker";
 import { API_URL } from "../constants/api";
+import DriverProfileCard from "../components/DriverProfileCard";
 
 type Ride = {
   _id: string;
@@ -203,27 +204,17 @@ export default function HomeScreen() {
           rides.map((ride) => (
             <View style={styles.rideCard} key={ride._id}>
 
-              {/* Driver Information */}
-              <View style={styles.driverRow}>
-                {ride.driverId?.profilePicture ? (
-                  <Image
-                    source={{ uri: ride.driverId.profilePicture }}
-                    style={styles.driverImage}
-                  />
-                ) : (
-                  <View style={styles.driverPlaceholder}>
-                    <Text style={styles.driverPlaceholderText}>👤</Text>
-                  </View>
-                )}
+          {/* Driver Information */}
+          <View style={styles.driverRow}>
+            <DriverProfileCard
+              rideId={ride._id}
+              driver={ride.driverId}
+            />
 
-                <Text style={styles.driverName}>
-                  {ride.driverId?.name || "Campus Ride Driver"}
-                </Text>
-
-                <View style={styles.availableBadge}>
-                  <Text style={styles.availableText}>Available</Text>
-                </View>
-              </View>
+            <View style={styles.availableBadge}>
+              <Text style={styles.availableText}>Available</Text>
+            </View>
+          </View>
 
               <View style={styles.rideDivider} />
 
