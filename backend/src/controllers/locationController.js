@@ -12,10 +12,14 @@ const searchLocations = async (req, res) => {
 
     // Build Photon API request
     const params = new URLSearchParams({
-      q: query,
-      limit: '6',
-      lang: 'en',
-      countrycode: 'MY',
+    q: query,
+    limit: '10',
+    lang: 'en',
+    countrycode: 'MY',
+    lat: '1.4927',
+    lon: '103.7414',
+    zoom: '10',
+    location_bias_scale: '0.2',
     });
 
     const response = await fetch(
