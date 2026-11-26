@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -8,74 +8,21 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
-import { useRouter, useFocusEffect } from "expo-router";
+import { Href, useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NavBar from "../components/NavBar";
-import CampusMapPicker from "../components/CampusMapPicker";
-import DriverProfileCard from "../components/DriverProfileCard";
-import LocationSearch, {
-  LocationResult,
-} from "../components/LocationSearch";
-import {
-  ApprovedRide,
-  RideRouteFilter,
-  getApprovedRides,
-} from "../services/api";
-import {
-  displayDepartureDate,
-  displayDepartureTime,
-} from "../utils/departureSchedule";
-
-type Ride = ApprovedRide;
-
-const UTM_ROUTE_PRESETS = [
-  "KTF",
-  "N28",
-  "N28A",
-  "KTDI",
-  "KTR",
-  "Arked Angkasa",
-];
-
-const matchesRouteFilter = (ride: Ride, filter: RideRouteFilter) => {
-  const originTerm = (filter.pickup || "").trim().toLowerCase();
-  const destTerm = (filter.destination || "").trim().toLowerCase();
-
-  const matchesOrigin =
-    !originTerm || ride.pickup.toLowerCase().includes(originTerm);
-  const matchesDestination =
-    !destTerm || ride.destination.toLowerCase().includes(destTerm);
-
-  return matchesOrigin && matchesDestination;
-};
+import RideCard from "../components/RideCard";
+import { ApprovedRide, getApprovedRides } from "../services/api";
 
 export default function HomeScreen() {
   const router = useRouter();
 
-  const [rides, setRides] = useState<Ride[]>([]);
+  const [rides, setRides] = useState<ApprovedRide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [pickup, setPickup] = useState("");
-  const [destination, setDestination] = useState("");
-  const [selectedPickup, setSelectedPickup] =
-    useState<LocationResult | null>(null);
-  const [selectedDestination, setSelectedDestination] =
-    useState<LocationResult | null>(null);
-  const [activeField, setActiveField] = useState<"pickup" | "destination">(
-    "pickup"
-  );
-  const [appliedFilter, setAppliedFilter] = useState<RideRouteFilter>({
-    pickup: "",
-    destination: "",
-  });
-  const appliedFilterRef = useRef<RideRouteFilter>(appliedFilter);
-  appliedFilterRef.current = appliedFilter;
-  const [showMap, setShowMap] = useState(false);
 
-  // Fetch available rides with optional route filtering (+ client-side fallback)
-  const fetchRides = useCallback(async (filterOverride?: RideRouteFilter) => {
-    const activeFilter = filterOverride ?? appliedFilterRef.current;
-
+  // Fetch all approved upcoming rides for the clean home feed
+  const fetchRides = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -87,12 +34,8 @@ export default function HomeScreen() {
         return;
       }
 
-      const data = await getApprovedRides(token, activeFilter);
-      const filteredRides = (data.rides || []).filter((ride) =>
-        matchesRouteFilter(ride, activeFilter)
-      );
-
-      setRides(filteredRides);
+      const data = await getApprovedRides(token);
+      setRides(data.rides || []);
     } catch (err) {
       console.error("Fetch rides error:", err);
       setError(
@@ -111,66 +54,9 @@ export default function HomeScreen() {
     }, [fetchRides])
   );
 
-  const handleSearch = () => {
-    const nextFilter: RideRouteFilter = {
-      pickup: pickup.trim(),
-      destination: destination.trim(),
-    };
-    setAppliedFilter(nextFilter);
-    appliedFilterRef.current = nextFilter;
-    fetchRides(nextFilter);
-  };
-
-  const handleReset = () => {
-    const emptyFilter: RideRouteFilter = { pickup: "", destination: "" };
-    setPickup("");
-    setDestination("");
-    setSelectedPickup(null);
-    setSelectedDestination(null);
-    setActiveField("pickup");
-    setAppliedFilter(emptyFilter);
-    appliedFilterRef.current = emptyFilter;
-    fetchRides(emptyFilter);
-  };
-
-  const handlePresetSelect = (preset: string) => {
-    if (activeField === "pickup") {
-      setPickup(preset);
-      setSelectedPickup(null);
-      if (!destination.trim()) {
-        setActiveField("destination");
-      }
-    } else {
-      setDestination(preset);
-      setSelectedDestination(null);
-    }
-  };
-
-  const resolveLocationText = (location: LocationResult) =>
-    location.name && location.name !== "Unknown location"
-      ? location.name
-      : location.address;
-
-  const hasActiveFilter = Boolean(
-    appliedFilter.pickup?.trim() || appliedFilter.destination?.trim()
-  );
-
-  const activeRouteSummary = [
-    appliedFilter.pickup?.trim() ? `From ${appliedFilter.pickup.trim()}` : "",
-    appliedFilter.destination?.trim()
-      ? `To ${appliedFilter.destination.trim()}`
-      : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
   return (
     <View style={styles.container}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.brandContainer}>
@@ -194,164 +80,32 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-
-        {/* Search Ride */}
-        <View style={styles.searchCard}>
-          <Text style={styles.searchTitle}>
-            Where would you like to go?
-          </Text>
-
-          <LocationSearch
-            label="Origin / Pickup Location"
-            value={pickup}
-            placeholder="Search or enter origin (e.g., KTF)"
-            onChangeText={(text) => {
-              setPickup(text);
-              setSelectedPickup(null);
-              setActiveField("pickup");
-            }}
-            onSelect={(location) => {
-              setPickup(resolveLocationText(location));
-              setSelectedPickup(location);
-            }}
-          />
-
-          <LocationSearch
-            label="Destination"
-            value={destination}
-            placeholder="Search or enter destination (e.g., N28)"
-            onChangeText={(text) => {
-              setDestination(text);
-              setSelectedDestination(null);
-              setActiveField("destination");
-            }}
-            onSelect={(location) => {
-              setDestination(resolveLocationText(location));
-              setSelectedDestination(location);
-            }}
-          />
-
-          {/* UTM Campus Preset Chips */}
-          <View style={styles.presetSection}>
-            <View style={styles.presetHeaderRow}>
-              <Text style={styles.presetLabel}>Quick select for:</Text>
-              <View style={styles.targetToggleRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.targetTogglePill,
-                    activeField === "pickup" && styles.targetTogglePillActive,
-                  ]}
-                  onPress={() => setActiveField("pickup")}
-                >
-                  <Text
-                    style={[
-                      styles.targetToggleText,
-                      activeField === "pickup" &&
-                        styles.targetToggleTextActive,
-                    ]}
-                  >
-                    Origin
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.targetTogglePill,
-                    activeField === "destination" &&
-                      styles.targetTogglePillActive,
-                  ]}
-                  onPress={() => setActiveField("destination")}
-                >
-                  <Text
-                    style={[
-                      styles.targetToggleText,
-                      activeField === "destination" &&
-                        styles.targetToggleTextActive,
-                    ]}
-                  >
-                    Destination
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.chipRow}>
-              {UTM_ROUTE_PRESETS.map((preset) => {
-                const currentTargetValue =
-                  activeField === "pickup" ? pickup : destination;
-                const isSelected =
-                  currentTargetValue.trim().toLowerCase() ===
-                  preset.toLowerCase();
-
-                return (
-                  <TouchableOpacity
-                    key={preset}
-                    style={[
-                      styles.presetChip,
-                      isSelected && styles.presetChipActive,
-                    ]}
-                    onPress={() => handlePresetSelect(preset)}
-                  >
-                    <Text
-                      style={[
-                        styles.presetChipText,
-                        isSelected && styles.presetChipTextActive,
-                      ]}
-                    >
-                      {preset}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-
-          <View style={styles.searchActionsRow}>
-            <TouchableOpacity
-              style={styles.findButton}
-              onPress={handleSearch}
-            >
-              <Text style={styles.findButtonText}>Find a Ride</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.resetButton}
-              onPress={handleReset}
-            >
-              <Text style={styles.resetButtonText}>Clear / Reset</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
+        {/* Compact Search / Filter Rides Trigger */}
         <TouchableOpacity
-          style={styles.mapToggle}
-          onPress={() => setShowMap(!showMap)}
+          style={styles.searchTrigger}
+          onPress={() => router.push("/search-rides" as Href)}
+          accessibilityRole="button"
+          accessibilityLabel="Search or filter rides"
         >
-          <Text style={styles.mapToggleText}>
-            {showMap ? "Hide campus map" : "Pick destination on map"}
-          </Text>
+          <View style={styles.searchTriggerIconBox}>
+            <Text style={styles.searchTriggerIcon}>🔍</Text>
+          </View>
+
+          <View style={styles.searchTriggerTextBlock}>
+            <Text style={styles.searchTriggerTitle}>Search / Filter Rides</Text>
+            <Text style={styles.searchTriggerSubtitle}>
+              Filter by origin, destination, or campus map
+            </Text>
+          </View>
+
+          <View style={styles.searchTriggerBadge}>
+            <Text style={styles.searchTriggerBadgeText}>Search →</Text>
+          </View>
         </TouchableOpacity>
-
-        {showMap && (
-          <CampusMapPicker
-            onSelect={(code) => {
-              setDestination(code);
-              setSelectedDestination(null);
-              setShowMap(false);
-            }}
-          />
-        )}
-
 
         {/* Available Rides */}
         <View style={styles.rideHeader}>
-          <View style={styles.rideHeaderLeft}>
-            <Text style={styles.sectionTitle}>Available Rides</Text>
-            {hasActiveFilter && (
-              <Text style={styles.activeFilterText}>
-                Filtered: {activeRouteSummary}
-              </Text>
-            )}
-          </View>
+          <Text style={styles.sectionTitle}>Available Rides</Text>
 
           <TouchableOpacity onPress={() => fetchRides()}>
             <Text style={styles.refreshText}>Refresh</Text>
@@ -379,106 +133,14 @@ export default function HomeScreen() {
         ) : rides.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🚘</Text>
-            <Text style={styles.emptyTitle}>
-              {hasActiveFilter ? "No matching rides found" : "No rides yet"}
-            </Text>
+            <Text style={styles.emptyTitle}>No rides yet</Text>
             <Text style={styles.emptyDescription}>
-              {hasActiveFilter
-                ? `No approved rides match ${activeRouteSummary}. Try another route or clear the filter.`
-                : "Available rides will appear here when drivers publish them."}
+              Available rides will appear here when drivers publish them.
             </Text>
-            {hasActiveFilter && (
-              <TouchableOpacity
-                style={styles.retryButton}
-                onPress={handleReset}
-              >
-                <Text style={styles.retryButtonText}>Clear / Reset</Text>
-              </TouchableOpacity>
-            )}
           </View>
         ) : (
-          rides.map((ride) => (
-            <View style={styles.rideCard} key={ride._id}>
-
-          {/* Driver Information */}
-          <View style={styles.driverRow}>
-            <DriverProfileCard
-              rideId={ride._id}
-              driver={ride.driverId}
-            />
-
-            <View style={styles.availableBadge}>
-              <Text style={styles.availableText}>Available</Text>
-            </View>
-          </View>
-
-              <View style={styles.rideDivider} />
-
-              {/* Route */}
-              <View style={styles.routeRow}>
-                <View style={styles.routeIcons}>
-                  <Text style={styles.routeDot}>●</Text>
-                  <View style={styles.routeLine} />
-                  <Text style={styles.routeDestination}>●</Text>
-                </View>
-
-                <View style={styles.routeLocations}>
-                  <View>
-                    <Text style={styles.routeLabel}>Pickup</Text>
-                    <Text style={styles.routeText}>{ride.pickup}</Text>
-                  </View>
-
-                  <View style={styles.destinationBlock}>
-                    <Text style={styles.routeLabel}>Destination</Text>
-                    <Text style={styles.routeText}>{ride.destination}</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.rideDivider} />
-
-              {/* Ride Details */}
-              <View style={styles.rideDetails}>
-                <View>
-                  <Text style={styles.detailLabel}>Departure</Text>
-                  <Text style={styles.detailValue}>
-                    {displayDepartureDate(ride)}
-                  </Text>
-                  <Text style={styles.detailValue}>
-                    {displayDepartureTime(ride)}
-                  </Text>
-                </View>
-
-                <View>
-                  <Text style={styles.detailLabel}>Available Seats</Text>
-                  <Text style={styles.detailValue}>
-                    {ride.seats} seats
-                  </Text>
-                </View>
-
-                <View>
-                  <Text style={styles.detailLabel}>Cost / Person</Text>
-                  <Text style={styles.priceValue}>
-                    RM {Number(ride.cost).toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-              
-              <TouchableOpacity
-                onPress={() =>
-                  router.push({
-                    pathname: "/ride-details",
-                    params: { rideId: ride._id },
-                  })
-                }
-              >
-                <Text style={styles.viewDetailsText}>View More Details →</Text>
-              </TouchableOpacity>
-
-            </View>
-          ))
+          rides.map((ride) => <RideCard key={ride._id} ride={ride} />)
         )}
-
       </ScrollView>
 
       <NavBar active="home" />
@@ -543,181 +205,62 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  searchCard: {
-    backgroundColor: "#FFF0DD",
-    marginHorizontal: 20,
-    padding: 18,
-    borderRadius: 18,
-    marginBottom: 28,
-  },
-
-  searchTitle: {
-    fontSize: 17,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 15,
-  },
-
-  locationBox: {
+  searchTrigger: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 10,
+    backgroundColor: "#FFF0DD",
+    marginHorizontal: 20,
+    marginBottom: 24,
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 10,
+    paddingVertical: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: "transparent",
+    borderColor: "#F2CFA9",
   },
 
-  locationBoxActive: {
-    borderColor: "#F28A24",
+  searchTriggerIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
   },
 
-  locationIcon: {
-    height: 17,
-    width: 17,
+  searchTriggerIcon: {
+    fontSize: 17,
+  },
+
+  searchTriggerTextBlock: {
+    flex: 1,
     marginRight: 10,
   },
 
-  locationInput: {
-    flex: 1,
-    color: "#333",
-    fontSize: 14,
-    paddingVertical: 4,
-  },
-
-  clearFieldText: {
-    color: "#999",
-    fontSize: 14,
-    fontWeight: "bold",
-    paddingLeft: 8,
-  },
-
-  presetSection: {
-    marginTop: 2,
-    marginBottom: 12,
-  },
-
-  presetHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-
-  presetLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#6B5E53",
-  },
-
-  targetToggleRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-
-  targetTogglePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E6C7A8",
-  },
-
-  targetTogglePillActive: {
-    backgroundColor: "#F28A24",
-    borderColor: "#F28A24",
-  },
-
-  targetToggleText: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#6B5E53",
-  },
-
-  targetToggleTextActive: {
-    color: "#FFFFFF",
-  },
-
-  chipRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-
-  presetChip: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E6C7A8",
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-
-  presetChipActive: {
-    backgroundColor: "#F28A24",
-    borderColor: "#F28A24",
-  },
-
-  presetChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#5C4735",
-  },
-
-  presetChipTextActive: {
-    color: "#FFFFFF",
-  },
-
-  searchActionsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginTop: 2,
-  },
-
-  findButton: {
-    flex: 1,
-    backgroundColor: "#F28A24",
-    padding: 14,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-
-  findButtonText: {
-    color: "#FFFFFF",
+  searchTriggerTitle: {
     fontSize: 15,
     fontWeight: "bold",
+    color: "#292929",
   },
 
-  resetButton: {
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+  searchTriggerSubtitle: {
+    fontSize: 12,
+    color: "#7A6A5A",
+    marginTop: 2,
+  },
+
+  searchTriggerBadge: {
+    backgroundColor: "#F28A24",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
     borderRadius: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#F28A24",
   },
 
-  resetButtonText: {
-    color: "#F28A24",
-    fontSize: 14,
+  searchTriggerBadgeText: {
+    color: "#FFFFFF",
+    fontSize: 12,
     fontWeight: "bold",
   },
-
-  mapToggle: {
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 12,
-    borderRadius: 10,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#F28A24",
-  },
-
-  mapToggleText: { color: "#F28A24", fontWeight: "bold", fontSize: 14 },
 
   rideHeader: {
     flexDirection: "row",
@@ -727,22 +270,10 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  rideHeaderLeft: {
-    flex: 1,
-    marginRight: 10,
-  },
-
   sectionTitle: {
     fontSize: 19,
     fontWeight: "bold",
     color: "#292929",
-  },
-
-  activeFilterText: {
-    fontSize: 12,
-    color: "#B45E14",
-    fontWeight: "600",
-    marginTop: 2,
   },
 
   refreshText: {
@@ -806,156 +337,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: "bold",
-  },
-
-  rideCard: {
-    backgroundColor: "#FFFFFF",
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 16,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: "#F1E7DB",
-  },
-
-  viewDetailsText: {
-  color: "#F28A24",
-  fontSize: 13,
-  fontWeight: "bold",
-  textAlign: "right",
-  marginTop: 15,
-  },  
-  viewDetailsButton: {
-    backgroundColor: "#FFF0DD",
-    padding: 12,
-    borderRadius: 9,
-    alignItems: "center",
-    marginTop: 15,
-  },
-
-  driverRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  driverImage: {
-    width: 38,
-    height: 38,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-
-  driverPlaceholder: {
-    width: 38,
-    height: 38,
-    borderRadius: 20,
-    backgroundColor: "#FFF0DD",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 10,
-  },
-
-  driverPlaceholderText: {
-    fontSize: 19,
-  },
-
-  driverName: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "bold",
-    color: "#333",
-  },
-
-  availableBadge: {
-    backgroundColor: "#E8F7E9",
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 12,
-  },
-
-  availableText: {
-    fontSize: 10,
-    color: "#329447",
-    fontWeight: "bold",
-  },
-
-  rideDivider: {
-    height: 1,
-    backgroundColor: "#F1E7DB",
-    marginVertical: 13,
-  },
-
-  routeRow: {
-    flexDirection: "row",
-  },
-
-  routeIcons: {
-    alignItems: "center",
-    width: 20,
-    marginRight: 10,
-    paddingTop: 3,
-  },
-
-  routeDot: {
-    fontSize: 11,
-    color: "#F28A24",
-  },
-
-  routeLine: {
-    width: 1,
-    height: 35,
-    backgroundColor: "#E6B98F",
-    marginVertical: 2,
-  },
-
-  routeDestination: {
-    fontSize: 11,
-    color: "#555",
-  },
-
-  routeLocations: {
-    flex: 1,
-    gap: 12,
-  },
-
-  routeLabel: {
-    fontSize: 10,
-    color: "#999",
-    marginBottom: 3,
-  },
-
-  routeText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#333",
-  },
-
-  destinationBlock: {
-    marginTop: 2,
-  },
-
-  rideDetails: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-
-  detailLabel: {
-    fontSize: 10,
-    color: "#999",
-    marginBottom: 6,
-  },
-
-  detailValue: {
-    fontSize: 11,
-    color: "#444",
-    fontWeight: "600",
-    marginBottom: 3,
-  },
-
-  priceValue: {
-    fontSize: 13,
-    color: "#F28A24",
     fontWeight: "bold",
   },
 });
