@@ -20,7 +20,6 @@ const searchLocations = async (req, res) => {
         lon: '103.7414',
         zoom: '10',
         location_bias_scale: '0.2',
-    });
 
     const response = await fetch(
       `https://photon.komoot.io/api/?${params}`

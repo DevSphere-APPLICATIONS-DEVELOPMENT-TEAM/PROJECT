@@ -13,6 +13,10 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../constants/api";
 import BackButton from "../components/BackButton";
+import {
+  displayDepartureDate,
+  displayDepartureTime,
+} from "../utils/departureSchedule";
 
 type RideDetails = {
   _id: string;
@@ -20,6 +24,7 @@ type RideDetails = {
   destination: string;
   departureDate: string;
   departureTime: string;
+  departureAt?: string | null;
   seats: number;
   cost: number;
   driverId: {
@@ -230,14 +235,14 @@ export default function RideDetailsScreen() {
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Departure Date</Text>
             <Text style={styles.infoValue}>
-              {ride.departureDate}
+              {displayDepartureDate(ride)}
             </Text>
           </View>
 
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Departure Time</Text>
             <Text style={styles.infoValue}>
-              {ride.departureTime}
+              {displayDepartureTime(ride)}
             </Text>
           </View>
 
