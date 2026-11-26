@@ -3,6 +3,34 @@ const Ride = require('../models/Ride');
 const User = require('../models/User');
 const DriverApplication = require('../models/DriverApplication');
 
+/**
+ * Parse departureDate (DD/MM/YYYY) + departureTime (e.g. "8:00 AM")
+ * into a JS Date assumed to be in Asia/Kuala_Lumpur (UTC+8).
+ */
+const parseDepartureStrings = (dateStr, timeStr) => {
+  const dateParts = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!dateParts) return null;
+
+  const [, dd, mm, yyyy] = dateParts;
+
+  const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!timeMatch) return null;
+
+  let [, hh, min, period] = timeMatch;
+  hh = Number(hh);
+  min = Number(min);
+
+  if (period.toUpperCase() === 'PM' && hh !== 12) hh += 12;
+  if (period.toUpperCase() === 'AM' && hh === 12) hh = 0;
+
+  // Build ISO string in UTC+8
+  const pad = (n) => String(n).padStart(2, '0');
+  const iso = `${yyyy}-${pad(mm)}-${pad(dd)}T${pad(hh)}:${pad(min)}:00+08:00`;
+  const parsed = new Date(iso);
+
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
 // Driver publishes a ride
 const publishRide = async (req, res) => {
   try {
@@ -11,6 +39,7 @@ const publishRide = async (req, res) => {
       destination,
       departureDate,
       departureTime,
+      departureAt,
       seats,
       cost,
     } = req.body;
@@ -39,6 +68,32 @@ const publishRide = async (req, res) => {
       });
     }
 
+    // Resolve the canonical departure timestamp
+    let resolvedDepartureAt = null;
+
+    if (departureAt) {
+      resolvedDepartureAt = new Date(departureAt);
+      if (isNaN(resolvedDepartureAt.getTime())) {
+        return res.status(400).json({
+          message: 'Invalid departure date/time.',
+        });
+      }
+    } else {
+      resolvedDepartureAt = parseDepartureStrings(departureDate, departureTime);
+      if (!resolvedDepartureAt) {
+        return res.status(400).json({
+          message: 'Invalid departure date/time format. Use DD/MM/YYYY and h:mm AM/PM.',
+        });
+      }
+    }
+
+    // Departure must be in the future
+    if (resolvedDepartureAt <= new Date()) {
+      return res.status(400).json({
+        message: 'Departure date and time must be in the future.',
+      });
+    }
+
     // Only approved drivers can publish rides
     const driverApplication = await DriverApplication.findOne({
       userId: req.user.id,
@@ -60,6 +115,7 @@ const publishRide = async (req, res) => {
       destination,
       departureDate,
       departureTime,
+      departureAt: resolvedDepartureAt,
       seats: Number(seats),
       cost: Number(cost),
       status: 'approved',

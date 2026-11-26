@@ -15,6 +15,10 @@ import NavBar from "../components/NavBar";
 import CampusMapPicker from "../components/CampusMapPicker";
 import { API_URL } from "../constants/api";
 import DriverProfileCard from "../components/DriverProfileCard";
+import {
+  displayDepartureDate,
+  displayDepartureTime,
+} from "../utils/departureSchedule";
 
 type Ride = {
   _id: string;
@@ -22,6 +26,7 @@ type Ride = {
   destination: string;
   departureDate: string;
   departureTime: string;
+  departureAt?: string | null;
   seats: number;
   cost: number;
   driverId: {
@@ -246,10 +251,10 @@ export default function HomeScreen() {
                 <View>
                   <Text style={styles.detailLabel}>Departure</Text>
                   <Text style={styles.detailValue}>
-                    {ride.departureDate}
+                    {displayDepartureDate(ride)}
                   </Text>
                   <Text style={styles.detailValue}>
-                    {ride.departureTime}
+                    {displayDepartureTime(ride)}
                   </Text>
                 </View>
 
