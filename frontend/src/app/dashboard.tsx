@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -14,19 +13,40 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import NavBar from "../components/NavBar";
 import CampusMapPicker from "../components/CampusMapPicker";
 import DriverProfileCard from "../components/DriverProfileCard";
+import LocationSearch, {
+  LocationResult,
+} from "../components/LocationSearch";
+import {
+  ApprovedRide,
+  RideRouteFilter,
+  getApprovedRides,
+} from "../services/api";
+import {
+  displayDepartureDate,
+  displayDepartureTime,
+} from "../utils/departureSchedule";
 
-type Ride = {
-  _id: string;
-  pickup: string;
-  destination: string;
-  departureDate: string;
-  departureTime: string;
-  seats: number;
-  cost: number;
-  driverId: {
-    name: string;
-    profilePicture?: string | null;
-  } | null;
+type Ride = ApprovedRide;
+
+const UTM_ROUTE_PRESETS = [
+  "KTF",
+  "N28",
+  "N28A",
+  "KTDI",
+  "KTR",
+  "Arked Angkasa",
+];
+
+const matchesRouteFilter = (ride: Ride, filter: RideRouteFilter) => {
+  const originTerm = (filter.pickup || "").trim().toLowerCase();
+  const destTerm = (filter.destination || "").trim().toLowerCase();
+
+  const matchesOrigin =
+    !originTerm || ride.pickup.toLowerCase().includes(originTerm);
+  const matchesDestination =
+    !destTerm || ride.destination.toLowerCase().includes(destTerm);
+
+  return matchesOrigin && matchesDestination;
 };
 
 export default function HomeScreen() {
@@ -37,6 +57,19 @@ export default function HomeScreen() {
   const [error, setError] = useState("");
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
+  const [selectedPickup, setSelectedPickup] =
+    useState<LocationResult | null>(null);
+  const [selectedDestination, setSelectedDestination] =
+    useState<LocationResult | null>(null);
+  const [activeField, setActiveField] = useState<"pickup" | "destination">(
+    "pickup"
+  );
+  const [appliedFilter, setAppliedFilter] = useState<RideRouteFilter>({
+    pickup: "",
+    destination: "",
+  });
+  const appliedFilterRef = useRef<RideRouteFilter>(appliedFilter);
+  appliedFilterRef.current = appliedFilter;
   const [showMap, setShowMap] = useState(false);
 
   // Fetch available rides with optional route filtering (+ client-side fallback)
@@ -92,6 +125,8 @@ export default function HomeScreen() {
     const emptyFilter: RideRouteFilter = { pickup: "", destination: "" };
     setPickup("");
     setDestination("");
+    setSelectedPickup(null);
+    setSelectedDestination(null);
     setActiveField("pickup");
     setAppliedFilter(emptyFilter);
     appliedFilterRef.current = emptyFilter;
@@ -101,13 +136,20 @@ export default function HomeScreen() {
   const handlePresetSelect = (preset: string) => {
     if (activeField === "pickup") {
       setPickup(preset);
+      setSelectedPickup(null);
       if (!destination.trim()) {
         setActiveField("destination");
       }
     } else {
       setDestination(preset);
+      setSelectedDestination(null);
     }
   };
+
+  const resolveLocationText = (location: LocationResult) =>
+    location.name && location.name !== "Unknown location"
+      ? location.name
+      : location.address;
 
   const hasActiveFilter = Boolean(
     appliedFilter.pickup?.trim() || appliedFilter.destination?.trim()
@@ -159,31 +201,145 @@ export default function HomeScreen() {
             Where would you like to go?
           </Text>
 
-          <View style={styles.locationBox}>
-            <Image
-              source={require("../../assets/images/locationicon.png")}
-              style={styles.locationIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.locationText}>Pickup location</Text>
+          <LocationSearch
+            label="Origin / Pickup Location"
+            value={pickup}
+            placeholder="Search or enter origin (e.g., KTF)"
+            onChangeText={(text) => {
+              setPickup(text);
+              setSelectedPickup(null);
+              setActiveField("pickup");
+            }}
+            onSelect={(location) => {
+              setPickup(resolveLocationText(location));
+              setSelectedPickup(location);
+            }}
+          />
+
+          <LocationSearch
+            label="Destination"
+            value={destination}
+            placeholder="Search or enter destination (e.g., N28)"
+            onChangeText={(text) => {
+              setDestination(text);
+              setSelectedDestination(null);
+              setActiveField("destination");
+            }}
+            onSelect={(location) => {
+              setDestination(resolveLocationText(location));
+              setSelectedDestination(location);
+            }}
+          />
+
+          {/* UTM Campus Preset Chips */}
+          <View style={styles.presetSection}>
+            <View style={styles.presetHeaderRow}>
+              <Text style={styles.presetLabel}>Quick select for:</Text>
+              <View style={styles.targetToggleRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.targetTogglePill,
+                    activeField === "pickup" && styles.targetTogglePillActive,
+                  ]}
+                  onPress={() => setActiveField("pickup")}
+                >
+                  <Text
+                    style={[
+                      styles.targetToggleText,
+                      activeField === "pickup" &&
+                        styles.targetToggleTextActive,
+                    ]}
+                  >
+                    Origin
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.targetTogglePill,
+                    activeField === "destination" &&
+                      styles.targetTogglePillActive,
+                  ]}
+                  onPress={() => setActiveField("destination")}
+                >
+                  <Text
+                    style={[
+                      styles.targetToggleText,
+                      activeField === "destination" &&
+                        styles.targetToggleTextActive,
+                    ]}
+                  >
+                    Destination
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.chipRow}>
+              {UTM_ROUTE_PRESETS.map((preset) => {
+                const currentTargetValue =
+                  activeField === "pickup" ? pickup : destination;
+                const isSelected =
+                  currentTargetValue.trim().toLowerCase() ===
+                  preset.toLowerCase();
+
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[
+                      styles.presetChip,
+                      isSelected && styles.presetChipActive,
+                    ]}
+                    onPress={() => handlePresetSelect(preset)}
+                  >
+                    <Text
+                      style={[
+                        styles.presetChipText,
+                        isSelected && styles.presetChipTextActive,
+                      ]}
+                    >
+                      {preset}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
 
-          <View style={styles.locationBox}>
-            <Image
-              source={require("../../assets/images/locationicon.png")}
-              style={styles.locationIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.locationText}>{destination || "Destination"}</Text>
-          </View>
+          <View style={styles.searchActionsRow}>
+            <TouchableOpacity
+              style={styles.findButton}
+              onPress={handleSearch}
+            >
+              <Text style={styles.findButtonText}>Find a Ride</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.findButton}
-            onPress={() => comingSoon("Find a Ride")}
-          >
-            <Text style={styles.findButtonText}>Find a Ride</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={handleReset}
+            >
+              <Text style={styles.resetButtonText}>Clear / Reset</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
+        <TouchableOpacity
+          style={styles.mapToggle}
+          onPress={() => setShowMap(!showMap)}
+        >
+          <Text style={styles.mapToggleText}>
+            {showMap ? "Hide campus map" : "Pick destination on map"}
+          </Text>
+        </TouchableOpacity>
+
+        {showMap && (
+          <CampusMapPicker
+            onSelect={(code) => {
+              setDestination(code);
+              setSelectedDestination(null);
+              setShowMap(false);
+            }}
+          />
+        )}
 
 
         {/* Available Rides */}
