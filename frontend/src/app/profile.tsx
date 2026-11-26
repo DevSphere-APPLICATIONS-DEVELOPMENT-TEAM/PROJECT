@@ -158,6 +158,13 @@ export default function Profile() {
           <Text style={styles.arrow}>›</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity
+          style={styles.driverButton}
+          onPress={() => router.push("/driver-application")}
+        >
+            <Text style={styles.driverButtonText}>🚗  Apply as Driver</Text>
+        </TouchableOpacity>
+
         <LogoutButton />
 
       </ScrollView>
@@ -448,4 +455,21 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "bold",
   },
+
+  driverButton: {
+  backgroundColor: "#FF781F",
+  borderWidth: 1.5,
+  borderColor: "#FF781F",
+  padding: 13,
+  borderRadius: 12,
+  alignItems: "center",
+  marginTop: 10,
+},
+
+driverButtonText: {
+  color: "#FFFFFF",
+  fontSize: 15,
+  fontWeight: "bold",
+},
+
 });

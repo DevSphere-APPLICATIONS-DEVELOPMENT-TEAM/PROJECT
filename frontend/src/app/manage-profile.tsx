@@ -34,6 +34,7 @@ export default function ManageProfile() {
   const [vehicleColor, setVehicleColor] = useState("");
   const [plateNumber, setPlateNumber] = useState("");
   const [licenseNumber, setLicenseNumber] = useState("");
+  const [showDriverForm, setShowDriverForm] = useState(false);
 
   const [errors, setErrors] = useState({
     name: "",
@@ -229,43 +230,6 @@ export default function ManageProfile() {
 
       let newApplicationStatus = applicationStatus;
 
-      // 2. Submit driver application only when needed
-      if (
-        isDriver &&
-        applicationStatus !== "pending" &&
-        applicationStatus !== "approved"
-      ) {
-        const driverResponse = await fetch(
-          `${API_URL}/drivers/apply`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              vehicleModel: vehicleModel.trim(),
-              vehicleColor: vehicleColor.trim(),
-              plateNumber: plateNumber.trim().toUpperCase(),
-              licenseNumber: licenseNumber.trim(),
-            }),
-          }
-        );
-
-        const driverData = await driverResponse.json();
-
-        if (!driverResponse.ok) {
-          throw new Error(
-            driverData.message || "Driver application failed."
-          );
-        }
-
-        newApplicationStatus =
-          driverData.application.status || "pending";
-
-        setApplicationStatus(newApplicationStatus);
-      }
-
       // 3. Update local user information
       const updatedUser = {
         ...currentUser,
@@ -274,7 +238,6 @@ export default function ManageProfile() {
         phone: phone.trim(),
         matricNumber,
         gender: gender.trim(),
-        isDriver: newApplicationStatus === "approved",
       };
 
       await AsyncStorage.setItem("user", JSON.stringify(updatedUser));
@@ -290,20 +253,7 @@ export default function ManageProfile() {
         await AsyncStorage.removeItem("profileImage");
       }
 
-      // 4. Show success message
-      if (isDriver && newApplicationStatus === "pending") {
-        Alert.alert(
-          "Application Submitted",
-          "Your profile has been saved. Your driver application is waiting for admin approval.",
-          [{ text: "OK", onPress: () => router.replace("/profile") }]
-        );
-      } else if (newApplicationStatus === "approved") {
-        Alert.alert(
-          "Success",
-          "Your profile has been updated!",
-          [{ text: "OK", onPress: () => router.replace("/profile") }]
-        );
-      } else {
+    else {
         Alert.alert(
           "Success",
           "Your profile has been updated!",
@@ -453,157 +403,7 @@ export default function ManageProfile() {
           <Text style={styles.errorText}>{errors.gender}</Text>
         )}
       </View>
-
-      {/* Driver Registration */}
-      <View style={styles.section}>
-        <View style={styles.driverHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.sectionTitle}>Become a Driver</Text>
-            <Text style={styles.driverDescription}>
-              Register your vehicle to publish rides and accept passengers.
-            </Text>
-          </View>
-
-          <Switch
-            value={isDriver}
-            onValueChange={setIsDriver}
-            trackColor={{ false: "#CCC", true: "#FFB477" }}
-            thumbColor={isDriver ? "#FF781F" : "#F4F3F4"}
-            disabled={applicationStatus === "approved"}
-          />
-        </View>
-
-        {applicationStatus && (
-          <View style={styles.statusBox}>
-            <Text style={styles.statusText}>
-              Application Status: {applicationStatus.toUpperCase()}
-            </Text>
-          </View>
-        )}
-
-        {!isDriver && (
-          <View style={styles.passengerNote}>
-            <Text style={styles.noteText}>
-              🚗 You are currently registered as a passenger. You can apply
-              to become a driver anytime.
-            </Text>
-          </View>
-        )}
-
-        {isDriver && (
-          <View style={styles.vehicleForm}>
-            <Text style={styles.label}>Vehicle Model</Text>
-            <TextInput
-              style={[
-                styles.input,
-                errors.vehicleModel ? styles.inputError : null,
-              ]}
-              value={vehicleModel}
-              onChangeText={(value) => {
-                setVehicleModel(value);
-                setErrors(prev => ({ ...prev, vehicleModel: "" }));
-              }}
-              placeholder="e.g. Perodua Myvi"
-              placeholderTextColor="#999"
-              editable={
-                applicationStatus !== "pending" &&
-                applicationStatus !== "approved"
-              }
-            />
-            {!!errors.vehicleModel && (
-              <Text style={styles.errorText}>{errors.vehicleModel}</Text>
-            )}
-
-            <Text style={styles.label}>Vehicle Colour</Text>
-            <TextInput
-              style={[
-                styles.input,
-                errors.vehicleColor ? styles.inputError : null,
-              ]}
-              value={vehicleColor}
-              onChangeText={(value) => {
-                setVehicleColor(value);
-                setErrors(prev => ({ ...prev, vehicleColor: "" }));
-              }}
-              placeholder="e.g. White"
-              placeholderTextColor="#999"
-              editable={
-                applicationStatus !== "pending" &&
-                applicationStatus !== "approved"
-              }
-            />
-            {!!errors.vehicleColor && (
-              <Text style={styles.errorText}>{errors.vehicleColor}</Text>
-            )}
-
-            <Text style={styles.label}>Plate Number</Text>
-            <TextInput
-              style={[
-                styles.input,
-                errors.plateNumber ? styles.inputError : null,
-              ]}
-              value={plateNumber}
-              onChangeText={(value) => {
-                setPlateNumber(value);
-                setErrors(prev => ({ ...prev, plateNumber: "" }));
-              }}
-              placeholder="e.g. JXX 1234"
-              autoCapitalize="characters"
-              placeholderTextColor="#999"
-              editable={
-                applicationStatus !== "pending" &&
-                applicationStatus !== "approved"
-              }
-            />
-            {!!errors.plateNumber && (
-              <Text style={styles.errorText}>{errors.plateNumber}</Text>
-            )}
-
-            <Text style={styles.label}>Driving Licence Number</Text>
-            <TextInput
-              style={[
-                styles.input,
-                errors.licenseNumber ? styles.inputError : null,
-              ]}
-              value={licenseNumber}
-              onChangeText={(value) => {
-                setLicenseNumber(value);
-                setErrors(prev => ({ ...prev, licenseNumber: "" }));
-              }}
-              placeholder="Enter your driving licence number"
-              placeholderTextColor="#999"
-              editable={
-                applicationStatus !== "pending" &&
-                applicationStatus !== "approved"
-              }
-            />
-            {!!errors.licenseNumber && (
-              <Text style={styles.errorText}>{errors.licenseNumber}</Text>
-            )}
-
-            {applicationStatus === "pending" && (
-              <Text style={styles.helperText}>
-                Your application is waiting for admin approval.
-              </Text>
-            )}
-
-            {applicationStatus === "rejected" && (
-              <Text style={styles.rejectedText}>
-                Your previous application was rejected. You can update your
-                details and submit again.
-              </Text>
-            )}
-
-            {!applicationStatus && (
-              <Text style={styles.helperText}>
-                Your application will be reviewed by an administrator.
-              </Text>
-            )}
-          </View>
-        )}
-      </View>
-
-      {/* Buttons */}
+      
       <TouchableOpacity
         style={styles.saveButton}
         onPress={handleSave}
