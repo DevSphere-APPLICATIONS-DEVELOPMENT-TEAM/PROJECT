@@ -1,9 +1,11 @@
+
 const express = require("express");
 const router = express.Router();
 
 const authMiddleware = require("../middleware/authMiddleware");
 
 const {
+  saveDraft,
   submitApplication,
   getMyApplication,
   getPendingApplications,
@@ -11,8 +13,9 @@ const {
   rejectApplication,
 } = require("../controllers/driverController");
 
+// Student routes
+router.post("/save-draft", authMiddleware, saveDraft);
 router.post("/apply", authMiddleware, submitApplication);
-
 router.get("/my-application", authMiddleware, getMyApplication);
 
 // Admin routes

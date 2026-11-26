@@ -1,3 +1,4 @@
+
 const DriverApplication = require("../models/DriverApplication");
 const User = require("../models/User");
 
@@ -13,6 +14,68 @@ const checkAdmin = (req, res) => {
   return true;
 };
 
+// Save or update application as draft
+const saveDraft = async (req, res) => {
+  try {
+    const {
+      vehicleModel,
+      vehicleColor,
+      plateNumber,
+      licenseNumber,
+      licencePhoto,
+      stickerPhoto,
+    } = req.body;
+
+    let application = await DriverApplication.findOne({
+      userId: req.user.id,
+    });
+
+    if (application && ["pending", "approved"].includes(application.status)) {
+      return res.status(400).json({
+        message: "You cannot edit an application that is pending or approved.",
+      });
+    }
+
+    const fields = {
+      vehicleModel,
+      vehicleColor,
+      plateNumber,
+      licenseNumber,
+      licencePhoto,
+      stickerPhoto,
+    };
+
+    if (!application) {
+      application = new DriverApplication({
+        userId: req.user.id,
+        status: "draft",
+      });
+    }
+
+    // Update only fields provided by the frontend
+    Object.entries(fields).forEach(([key, value]) => {
+      if (value !== undefined) {
+        application[key] = typeof value === "string" ? value.trim() : value;
+      }
+    });
+
+    application.status = "draft";
+
+    await application.save();
+
+    return res.status(200).json({
+      message: "Draft saved successfully.",
+      application,
+    });
+  } catch (error) {
+    console.error("Save draft error:", error);
+
+    return res.status(500).json({
+      message: "Unable to save application draft.",
+    });
+  }
+};
+
 // Submit driver application
 const submitApplication = async (req, res) => {
   try {
@@ -21,62 +84,61 @@ const submitApplication = async (req, res) => {
       vehicleColor,
       plateNumber,
       licenseNumber,
-
-      licencePhoto,
-        stickerPhoto,
-    } = req.body;
-
-    if (!vehicleModel || !vehicleColor || !plateNumber || !licenseNumber) {
-      return res.status(400).json({
-        message: "Please complete all driver information.",
-      });
-    }
-
-    const existingApplication = await DriverApplication.findOne({
-      userId: req.user.id,
-    });
-
-    if (existingApplication) {
-      if (existingApplication.status !== "rejected") {
-        return res.status(400).json({
-          message: "You already have a driver application.",
-        });
-      }
-
-      existingApplication.vehicleModel = vehicleModel;
-      existingApplication.vehicleColor = vehicleColor;
-      existingApplication.plateNumber = plateNumber;
-      existingApplication.licenseNumber = licenseNumber;
-      existingApplication.licencePhoto = licencePhoto;
-      existingApplication.stickerPhoto = stickerPhoto; 
-      existingApplication.status = "pending";
-      existingApplication.adminRemarks = "";
-
-      await existingApplication.save();
-
-      return res.status(200).json({
-        message: "Driver application resubmitted successfully.",
-        application: existingApplication,
-      });
-    }
-
-    const application = await DriverApplication.create({
-      userId: req.user.id,
-      vehicleModel,
-      vehicleColor,
-      plateNumber,
-      licenseNumber,
       licencePhoto,
       stickerPhoto,
+    } = req.body;
 
+    // Validate all required information
+    if (
+      !vehicleModel?.trim() ||
+      !vehicleColor?.trim() ||
+      !plateNumber?.trim() ||
+      !licenseNumber?.trim() ||
+      !licencePhoto ||
+      !stickerPhoto
+    ) {
+      return res.status(400).json({
+        message: "Please complete all driver information and upload both photos.",
+      });
+    }
+
+    let application = await DriverApplication.findOne({
+      userId: req.user.id,
     });
 
-    return res.status(201).json({
+    if (application && ["pending", "approved"].includes(application.status)) {
+      return res.status(400).json({
+        message: "You already have an active driver application.",
+      });
+    }
+
+    const applicationData = {
+      vehicleModel: vehicleModel.trim(),
+      vehicleColor: vehicleColor.trim(),
+      plateNumber: plateNumber.trim().toUpperCase(),
+      licenseNumber: licenseNumber.trim(),
+      licencePhoto,
+      stickerPhoto,
+      status: "pending",
+      adminRemarks: "",
+      submittedAt: new Date(),
+    };
+
+    if (application) {
+      Object.assign(application, applicationData);
+      await application.save();
+    } else {
+      application = await DriverApplication.create({
+        userId: req.user.id,
+        ...applicationData,
+      });
+    }
+
+    return res.status(200).json({
       message: "Driver application submitted successfully.",
       application,
     });
-  } catch (error) { 
-    console
+  } catch (error) {
     console.error("Driver application error:", error);
 
     return res.status(500).json({
@@ -116,7 +178,7 @@ const getPendingApplications = async (req, res) => {
     console.error("Get pending applications error:", error);
 
     return res.status(500).json({
-      message: "Unable to retrieve pending applications.",
+      message: "Unable to retrieve driver applications.",
     });
   }
 };
@@ -209,7 +271,7 @@ const rejectApplication = async (req, res) => {
       application,
     });
   } catch (error) {
-    console.error("Unable to reject driver application:", error);
+    console.error("Reject application error:", error);
 
     return res.status(500).json({
       message: "Unable to reject driver application.",
@@ -218,6 +280,7 @@ const rejectApplication = async (req, res) => {
 };
 
 module.exports = {
+  saveDraft,
   submitApplication,
   getMyApplication,
   getPendingApplications,
