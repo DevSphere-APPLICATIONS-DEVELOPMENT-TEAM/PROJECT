@@ -132,12 +132,30 @@ const publishRide = async (req, res) => {
   }
 };
 
-// Passengers view available rides
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Passengers view available rides (with optional route filters)
 const getApprovedRides = async (req, res) => {
   try {
-    const rides = await Ride.find({
-      status: 'approved',
-    })
+    const pickupQuery = (req.query.pickup ?? req.query.origin ?? '')
+      .toString()
+      .trim();
+    const destinationQuery = (req.query.destination ?? '').toString().trim();
+
+    const filter = { status: 'approved' };
+
+    if (pickupQuery) {
+      filter.pickup = { $regex: escapeRegex(pickupQuery), $options: 'i' };
+    }
+
+    if (destinationQuery) {
+      filter.destination = {
+        $regex: escapeRegex(destinationQuery),
+        $options: 'i',
+      };
+    }
+
+    const rides = await Ride.find(filter)
       .populate('driverId', 'name profilePicture')
       .sort({ createdAt: -1 });
 
