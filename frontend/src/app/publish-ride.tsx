@@ -16,6 +16,13 @@ import {
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import BackButton from "../components/BackButton";
+import DeparturePicker from "../components/DeparturePicker";
+import {
+  buildDepartureDate,
+  isFutureDeparture,
+  toDisplayDate,
+  toDisplayTime,
+} from "../utils/departureSchedule";
 import { API_URL } from "../constants/api";
 
 export default function PublishRide() {
@@ -27,11 +34,22 @@ export default function PublishRide() {
 
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
-  const [departureDate, setDepartureDate] = useState("");
-  const [departureTime, setDepartureTime] = useState("");
+  const [depDate, setDepDate] = useState(""); // YYYY-MM-DD from picker
+  const [depTime, setDepTime] = useState(""); // HH:mm from picker
   const [seats, setSeats] = useState("");
   const [cost, setCost] = useState("10.00");
   const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [errorBanner, setErrorBanner] = useState("");
+
+  /** Show feedback on both web (window.alert) and mobile (Alert.alert). */
+  const showAlert = (title: string, message: string) => {
+    setErrorBanner(message);
+    if (Platform.OS === "web") {
+      window.alert(`${title}\n\n${message}`);
+    } else {
+      Alert.alert(title, message);
+    }
+  };
 
   // Check driver application status
   useEffect(() => {
@@ -74,31 +92,46 @@ export default function PublishRide() {
   // Publish ride to MongoDB
   const handlePublish = async () => {
     if (publishing) return;
+    setErrorBanner("");
 
     if (
       !pickup.trim() ||
       !destination.trim() ||
-      !departureDate.trim() ||
-      !departureTime.trim() ||
+      !depDate ||
+      !depTime ||
       !seats.trim() ||
       !cost.trim()
     ) {
-      Alert.alert("Incomplete Information", "Please fill in all fields.");
+      showAlert("Incomplete Information", "Please fill in all fields.");
       return;
     }
 
     if (pickup.trim().toLowerCase() === destination.trim().toLowerCase()) {
-      Alert.alert("Invalid Route", "Pickup and destination cannot be the same.");
+      showAlert("Invalid Route", "Pickup and destination cannot be the same.");
+      return;
+    }
+
+    const departureDateObj = buildDepartureDate(depDate, depTime);
+    if (!departureDateObj) {
+      showAlert("Invalid Schedule", "Please select a valid departure date and time.");
+      return;
+    }
+
+    if (!isFutureDeparture(departureDateObj)) {
+      showAlert(
+        "Invalid Schedule",
+        "Departure date and time must be in the future."
+      );
       return;
     }
 
     if (!Number.isInteger(Number(seats)) || Number(seats) < 1) {
-      Alert.alert("Invalid Seats", "Please enter a valid number of seats.");
+      showAlert("Invalid Seats", "Please enter a valid number of seats.");
       return;
     }
 
     if (!Number.isFinite(Number(cost)) || Number(cost) < 0) {
-      Alert.alert("Invalid Cost", "Please enter a valid cost.");
+      showAlert("Invalid Cost", "Please enter a valid cost.");
       return;
     }
 
@@ -108,7 +141,7 @@ export default function PublishRide() {
       const token = await AsyncStorage.getItem("token");
 
       if (!token) {
-        Alert.alert("Login Required", "Please log in again.");
+        showAlert("Login Required", "Please log in again.");
         router.replace("/login");
         return;
       }
@@ -122,8 +155,9 @@ export default function PublishRide() {
         body: JSON.stringify({
           pickup: pickup.trim(),
           destination: destination.trim(),
-          departureDate: departureDate.trim(),
-          departureTime: departureTime.trim(),
+          departureDate: toDisplayDate(depDate),
+          departureTime: toDisplayTime(depTime),
+          departureAt: departureDateObj!.toISOString(),
           seats: Number(seats),
           cost: Number(cost),
         }),
@@ -132,7 +166,7 @@ export default function PublishRide() {
       const data = await response.json();
 
       if (!response.ok) {
-        Alert.alert(
+        showAlert(
           "Unable to Publish",
           data.message || "Something went wrong. Please try again."
         );
@@ -143,7 +177,7 @@ export default function PublishRide() {
 
     } catch (error) {
       console.error("Publish ride error:", error);
-      Alert.alert(
+      showAlert(
         "Connection Error",
         "Unable to connect to the server. Please try again."
       );
@@ -271,29 +305,12 @@ export default function PublishRide() {
         </Text>
 
         <View style={styles.inputCard}>
-          <View style={styles.inputRow}>
-            <Text style={styles.inputIcon}>📅</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Departure Date (e.g. 15/11/2026)"
-              placeholderTextColor="#999"
-              value={departureDate}
-              onChangeText={setDepartureDate}
-            />
-          </View>
-
-          <View style={styles.separator} />
-
-          <View style={styles.inputRow}>
-            <Text style={styles.inputIcon}>🕒</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Departure Time (e.g. 8:30 AM)"
-              placeholderTextColor="#999"
-              value={departureTime}
-              onChangeText={setDepartureTime}
-            />
-          </View>
+          <DeparturePicker
+            dateValue={depDate}
+            timeValue={depTime}
+            onDateChange={setDepDate}
+            onTimeChange={setDepTime}
+          />
         </View>
 
         <Text style={styles.sectionTitle}>Available Seats</Text>
@@ -347,6 +364,15 @@ export default function PublishRide() {
             />
           </View>
         </View>
+
+        {!!errorBanner && (
+          <View style={styles.errorBanner}>
+            <Text style={styles.errorBannerText}>{errorBanner}</Text>
+            <TouchableOpacity onPress={() => setErrorBanner("")}>
+              <Text style={styles.errorDismiss}>✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[
@@ -682,5 +708,33 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 13,
     fontWeight: "bold",
+  },
+
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#FEE2E2",
+    borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 14,
+  },
+
+  errorBannerText: {
+    flex: 1,
+    color: "#B91C1C",
+    fontSize: 12,
+    fontWeight: "600",
+    marginRight: 8,
+  },
+
+  errorDismiss: {
+    color: "#B91C1C",
+    fontSize: 14,
+    fontWeight: "bold",
+    paddingHorizontal: 4,
   },
 });

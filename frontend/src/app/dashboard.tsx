@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,28 +6,45 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+  TextInput,
   ActivityIndicator,
 } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import NavBar from "../components/NavBar";
 import CampusMapPicker from "../components/CampusMapPicker";
-import { API_URL } from "../constants/api";
 import DriverProfileCard from "../components/DriverProfileCard";
+import {
+  ApprovedRide,
+  RideRouteFilter,
+  getApprovedRides,
+} from "../services/api";
+import {
+  displayDepartureDate,
+  displayDepartureTime,
+} from "../utils/departureSchedule";
 
-type Ride = {
-  _id: string;
-  pickup: string;
-  destination: string;
-  departureDate: string;
-  departureTime: string;
-  seats: number;
-  cost: number;
-  driverId: {
-    name: string;
-    profilePicture?: string | null;
-  } | null;
+type Ride = ApprovedRide;
+
+const UTM_ROUTE_PRESETS = [
+  "KTF",
+  "N28",
+  "N28A",
+  "KTDI",
+  "KTR",
+  "Arked Angkasa",
+];
+
+const matchesRouteFilter = (ride: Ride, filter: RideRouteFilter) => {
+  const originTerm = (filter.pickup || "").trim().toLowerCase();
+  const destTerm = (filter.destination || "").trim().toLowerCase();
+
+  const matchesOrigin =
+    !originTerm || ride.pickup.toLowerCase().includes(originTerm);
+  const matchesDestination =
+    !destTerm || ride.destination.toLowerCase().includes(destTerm);
+
+  return matchesOrigin && matchesDestination;
 };
 
 export default function HomeScreen() {
@@ -36,15 +53,24 @@ export default function HomeScreen() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
+  const [activeField, setActiveField] = useState<"pickup" | "destination">(
+    "pickup"
+  );
+  const [appliedFilter, setAppliedFilter] = useState<RideRouteFilter>({
+    pickup: "",
+    destination: "",
+  });
+  const appliedFilterRef = useRef<RideRouteFilter>(appliedFilter);
+  appliedFilterRef.current = appliedFilter;
+
   const [showMap, setShowMap] = useState(false);
 
-  const comingSoon = (feature: string) => {
-    Alert.alert(feature, "This feature will be available in Sprint 2.");
-  };
+  // Fetch available rides with optional route filtering (+ client-side fallback)
+  const fetchRides = useCallback(async (filterOverride?: RideRouteFilter) => {
+    const activeFilter = filterOverride ?? appliedFilterRef.current;
 
-  // Fetch available rides whenever Home screen is opened
-  const fetchRides = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -56,20 +82,12 @@ export default function HomeScreen() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/rides/approved`, {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const data = await getApprovedRides(token, activeFilter);
+      const filteredRides = (data.rides || []).filter((ride) =>
+        matchesRouteFilter(ride, activeFilter)
+      );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Unable to load available rides.");
-      }
-
-      setRides(data.rides || []);
+      setRides(filteredRides);
     } catch (err) {
       console.error("Fetch rides error:", err);
       setError(
@@ -87,6 +105,50 @@ export default function HomeScreen() {
       fetchRides();
     }, [fetchRides])
   );
+
+  const handleSearch = () => {
+    const nextFilter: RideRouteFilter = {
+      pickup: pickup.trim(),
+      destination: destination.trim(),
+    };
+    setAppliedFilter(nextFilter);
+    appliedFilterRef.current = nextFilter;
+    fetchRides(nextFilter);
+  };
+
+  const handleReset = () => {
+    const emptyFilter: RideRouteFilter = { pickup: "", destination: "" };
+    setPickup("");
+    setDestination("");
+    setActiveField("pickup");
+    setAppliedFilter(emptyFilter);
+    appliedFilterRef.current = emptyFilter;
+    fetchRides(emptyFilter);
+  };
+
+  const handlePresetSelect = (preset: string) => {
+    if (activeField === "pickup") {
+      setPickup(preset);
+      if (!destination.trim()) {
+        setActiveField("destination");
+      }
+    } else {
+      setDestination(preset);
+    }
+  };
+
+  const hasActiveFilter = Boolean(
+    appliedFilter.pickup?.trim() || appliedFilter.destination?.trim()
+  );
+
+  const activeRouteSummary = [
+    appliedFilter.pickup?.trim() ? `From ${appliedFilter.pickup.trim()}` : "",
+    appliedFilter.destination?.trim()
+      ? `To ${appliedFilter.destination.trim()}`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <View style={styles.container}>
@@ -121,30 +183,161 @@ export default function HomeScreen() {
             Where would you like to go?
           </Text>
 
-          <View style={styles.locationBox}>
-            <Image
-              source={require("../../assets/images/locationicon.png")}
-              style={styles.locationIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.locationText}>Pickup location</Text>
-          </View>
-
-          <View style={styles.locationBox}>
-            <Image
-              source={require("../../assets/images/locationicon.png")}
-              style={styles.locationIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.locationText}>{destination || "Destination"}</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.findButton}
-            onPress={() => comingSoon("Find a Ride")}
+          <View
+            style={[
+              styles.locationBox,
+              activeField === "pickup" && styles.locationBoxActive,
+            ]}
           >
-            <Text style={styles.findButtonText}>Find a Ride</Text>
-          </TouchableOpacity>
+            <Image
+              source={require("../../assets/images/locationicon.png")}
+              style={styles.locationIcon}
+              resizeMode="contain"
+            />
+            <TextInput
+              style={styles.locationInput}
+              placeholder="Origin / Pickup (e.g., KTF)"
+              placeholderTextColor="#999"
+              value={pickup}
+              onChangeText={setPickup}
+              onFocus={() => setActiveField("pickup")}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
+              accessibilityLabel="Origin pickup location"
+            />
+            {pickup.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setPickup("")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Clear origin"
+              >
+                <Text style={styles.clearFieldText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <View
+            style={[
+              styles.locationBox,
+              activeField === "destination" && styles.locationBoxActive,
+            ]}
+          >
+            <Image
+              source={require("../../assets/images/locationicon.png")}
+              style={styles.locationIcon}
+              resizeMode="contain"
+            />
+            <TextInput
+              style={styles.locationInput}
+              placeholder="Destination (e.g., N28)"
+              placeholderTextColor="#999"
+              value={destination}
+              onChangeText={setDestination}
+              onFocus={() => setActiveField("destination")}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
+              accessibilityLabel="Destination location"
+            />
+            {destination.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setDestination("")}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Clear destination"
+              >
+                <Text style={styles.clearFieldText}>✕</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* UTM Campus Preset Chips */}
+          <View style={styles.presetSection}>
+            <View style={styles.presetHeaderRow}>
+              <Text style={styles.presetLabel}>Quick select for:</Text>
+              <View style={styles.targetToggleRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.targetTogglePill,
+                    activeField === "pickup" && styles.targetTogglePillActive,
+                  ]}
+                  onPress={() => setActiveField("pickup")}
+                >
+                  <Text
+                    style={[
+                      styles.targetToggleText,
+                      activeField === "pickup" &&
+                        styles.targetToggleTextActive,
+                    ]}
+                  >
+                    Origin
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.targetTogglePill,
+                    activeField === "destination" &&
+                      styles.targetTogglePillActive,
+                  ]}
+                  onPress={() => setActiveField("destination")}
+                >
+                  <Text
+                    style={[
+                      styles.targetToggleText,
+                      activeField === "destination" &&
+                        styles.targetToggleTextActive,
+                    ]}
+                  >
+                    Destination
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.chipRow}>
+              {UTM_ROUTE_PRESETS.map((preset) => {
+                const currentTargetValue =
+                  activeField === "pickup" ? pickup : destination;
+                const isSelected =
+                  currentTargetValue.trim().toLowerCase() ===
+                  preset.toLowerCase();
+
+                return (
+                  <TouchableOpacity
+                    key={preset}
+                    style={[
+                      styles.presetChip,
+                      isSelected && styles.presetChipActive,
+                    ]}
+                    onPress={() => handlePresetSelect(preset)}
+                  >
+                    <Text
+                      style={[
+                        styles.presetChipText,
+                        isSelected && styles.presetChipTextActive,
+                      ]}
+                    >
+                      {preset}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          <View style={styles.searchActionsRow}>
+            <TouchableOpacity
+              style={styles.findButton}
+              onPress={handleSearch}
+            >
+              <Text style={styles.findButtonText}>Find a Ride</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.resetButton}
+              onPress={handleReset}
+            >
+              <Text style={styles.resetButtonText}>Clear / Reset</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -167,9 +360,16 @@ export default function HomeScreen() {
 
         {/* Available Rides */}
         <View style={styles.rideHeader}>
-          <Text style={styles.sectionTitle}>Available Rides</Text>
+          <View style={styles.rideHeaderLeft}>
+            <Text style={styles.sectionTitle}>Available Rides</Text>
+            {hasActiveFilter && (
+              <Text style={styles.activeFilterText}>
+                Filtered: {activeRouteSummary}
+              </Text>
+            )}
+          </View>
 
-          <TouchableOpacity onPress={fetchRides}>
+          <TouchableOpacity onPress={() => fetchRides()}>
             <Text style={styles.refreshText}>Refresh</Text>
           </TouchableOpacity>
         </View>
@@ -187,7 +387,7 @@ export default function HomeScreen() {
 
             <TouchableOpacity
               style={styles.retryButton}
-              onPress={fetchRides}
+              onPress={() => fetchRides()}
             >
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
@@ -195,10 +395,22 @@ export default function HomeScreen() {
         ) : rides.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🚘</Text>
-            <Text style={styles.emptyTitle}>No rides yet</Text>
-            <Text style={styles.emptyDescription}>
-              Available rides will appear here when drivers publish them.
+            <Text style={styles.emptyTitle}>
+              {hasActiveFilter ? "No matching rides found" : "No rides yet"}
             </Text>
+            <Text style={styles.emptyDescription}>
+              {hasActiveFilter
+                ? `No approved rides match ${activeRouteSummary}. Try another route or clear the filter.`
+                : "Available rides will appear here when drivers publish them."}
+            </Text>
+            {hasActiveFilter && (
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={handleReset}
+              >
+                <Text style={styles.retryButtonText}>Clear / Reset</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
           rides.map((ride) => (
@@ -246,10 +458,10 @@ export default function HomeScreen() {
                 <View>
                   <Text style={styles.detailLabel}>Departure</Text>
                   <Text style={styles.detailValue}>
-                    {ride.departureDate}
+                    {displayDepartureDate(ride)}
                   </Text>
                   <Text style={styles.detailValue}>
-                    {ride.departureTime}
+                    {displayDepartureTime(ride)}
                   </Text>
                 </View>
 
@@ -367,8 +579,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: 10,
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+
+  locationBoxActive: {
+    borderColor: "#F28A24",
   },
 
   locationIcon: {
@@ -377,22 +596,130 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  locationText: {
+  locationInput: {
+    flex: 1,
+    color: "#333",
+    fontSize: 14,
+    paddingVertical: 4,
+  },
+
+  clearFieldText: {
     color: "#999",
     fontSize: 14,
+    fontWeight: "bold",
+    paddingLeft: 8,
+  },
+
+  presetSection: {
+    marginTop: 2,
+    marginBottom: 12,
+  },
+
+  presetHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+
+  presetLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B5E53",
+  },
+
+  targetToggleRow: {
+    flexDirection: "row",
+    gap: 6,
+  },
+
+  targetTogglePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6C7A8",
+  },
+
+  targetTogglePillActive: {
+    backgroundColor: "#F28A24",
+    borderColor: "#F28A24",
+  },
+
+  targetToggleText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6B5E53",
+  },
+
+  targetToggleTextActive: {
+    color: "#FFFFFF",
+  },
+
+  chipRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+
+  presetChip: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E6C7A8",
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  presetChipActive: {
+    backgroundColor: "#F28A24",
+    borderColor: "#F28A24",
+  },
+
+  presetChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#5C4735",
+  },
+
+  presetChipTextActive: {
+    color: "#FFFFFF",
+  },
+
+  searchActionsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 2,
   },
 
   findButton: {
+    flex: 1,
     backgroundColor: "#F28A24",
-    padding: 15,
+    padding: 14,
     borderRadius: 10,
     alignItems: "center",
-    marginTop: 5,
   },
 
   findButtonText: {
     color: "#FFFFFF",
     fontSize: 15,
+    fontWeight: "bold",
+  },
+
+  resetButton: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#F28A24",
+  },
+
+  resetButtonText: {
+    color: "#F28A24",
+    fontSize: 14,
     fontWeight: "bold",
   },
 
@@ -416,10 +743,22 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  rideHeaderLeft: {
+    flex: 1,
+    marginRight: 10,
+  },
+
   sectionTitle: {
     fontSize: 19,
     fontWeight: "bold",
     color: "#292929",
+  },
+
+  activeFilterText: {
+    fontSize: 12,
+    color: "#B45E14",
+    fontWeight: "600",
+    marginTop: 2,
   },
 
   refreshText: {
