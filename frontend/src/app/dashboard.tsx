@@ -15,7 +15,9 @@ import NavBar from "../components/NavBar";
 import CampusMapPicker from "../components/CampusMapPicker";
 import { API_URL } from "../constants/api";
 import DriverProfileCard from "../components/DriverProfileCard";
-
+import LocationSearch, {
+  LocationResult,
+} from "../components/LocationSearch";
 type Ride = {
   _id: string;
   pickup: string;
@@ -36,8 +38,14 @@ export default function HomeScreen() {
   const [rides, setRides] = useState<Ride[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
-  const [showMap, setShowMap] = useState(false);
+
+  const [selectedPickup, setSelectedPickup] =
+    useState<LocationResult | null>(null);
+
+  const [selectedDestination, setSelectedDestination] =
+    useState<LocationResult | null>(null);
 
   const comingSoon = (feature: string) => {
     Alert.alert(feature, "This feature will be available in Sprint 2.");
@@ -90,7 +98,10 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
 
         {/* Header */}
         <View style={styles.header}>
@@ -115,55 +126,59 @@ export default function HomeScreen() {
           </Text>
         </View>
 
+
         {/* Search Ride */}
         <View style={styles.searchCard}>
           <Text style={styles.searchTitle}>
             Where would you like to go?
           </Text>
 
-          <View style={styles.locationBox}>
-            <Image
-              source={require("../../assets/images/locationicon.png")}
-              style={styles.locationIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.locationText}>Pickup location</Text>
-          </View>
+          <LocationSearch
+            label="Pickup Location"
+            value={pickup}
+            placeholder="Search pickup location"
+            onChangeText={(text) => {
+              setPickup(text);
+              setSelectedPickup(null);
+            }}
+            onSelect={(location) => {
+              setPickup(location.address);
+              setSelectedPickup(location);
+            }}
+          />
 
-          <View style={styles.locationBox}>
-            <Image
-              source={require("../../assets/images/locationicon.png")}
-              style={styles.locationIcon}
-              resizeMode="contain"
-            />
-            <Text style={styles.locationText}>{destination || "Destination"}</Text>
-          </View>
+          <LocationSearch
+            label="Destination"
+            value={destination}
+            placeholder="Search destination"
+            onChangeText={(text) => {
+              setDestination(text);
+              setSelectedDestination(null);
+            }}
+            onSelect={(location) => {
+              setDestination(location.address);
+              setSelectedDestination(location);
+            }}
+          />
 
           <TouchableOpacity
             style={styles.findButton}
-            onPress={() => comingSoon("Find a Ride")}
+            onPress={() => {
+              if (!selectedPickup || !selectedDestination) {
+                Alert.alert(
+                  "Select Locations",
+                  "Please select both pickup and destination from the suggestions."
+                );
+                return;
+              }
+
+              comingSoon("Find a Ride");
+            }}
           >
             <Text style={styles.findButtonText}>Find a Ride</Text>
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          style={styles.mapToggle}
-          onPress={() => setShowMap(!showMap)}
-        >
-          <Text style={styles.mapToggleText}>
-            {showMap ? "Hide campus map" : "Pick destination on map"}
-          </Text>
-        </TouchableOpacity>
-
-        {showMap && (
-          <CampusMapPicker
-            onSelect={(code) => {
-              setDestination(code);
-              setShowMap(false);
-            }}
-          />
-        )}
 
         {/* Available Rides */}
         <View style={styles.rideHeader}>
