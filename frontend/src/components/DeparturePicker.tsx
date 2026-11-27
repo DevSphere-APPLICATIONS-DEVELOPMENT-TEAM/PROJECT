@@ -318,7 +318,7 @@ function MobileTimePicker({
   );
 }
 
-// ─── Main exported component ────────────────────────────────────────
+
 export default function DeparturePicker({
   dateValue,
   timeValue,
@@ -331,26 +331,39 @@ export default function DeparturePicker({
   return (
     <View>
       <View style={styles.inputRow}>
-        <Text style={styles.inputIcon}>📅</Text>
         {Platform.OS === "web" ? (
-          <WebDateInput
+          <View style={styles.webInputWrapper}>
+            <Text style={styles.inputIcon}>📅</Text>
+            <WebDateInput
+              value={dateValue}
+              onChange={onDateChange}
+              min={minDate}
+            />
+          </View>
+        ) : (
+          <MobileDatePicker
             value={dateValue}
             onChange={onDateChange}
-            min={minDate}
           />
-        ) : (
-          <MobileDatePicker value={dateValue} onChange={onDateChange} />
         )}
       </View>
 
       <View style={styles.separator} />
 
       <View style={styles.inputRow}>
-        <Text style={styles.inputIcon}>🕒</Text>
         {Platform.OS === "web" ? (
-          <WebTimeInput value={timeValue} onChange={onTimeChange} />
+          <View style={styles.webInputWrapper}>
+            <Text style={styles.inputIcon}>🕒</Text>
+            <WebTimeInput
+              value={timeValue}
+              onChange={onTimeChange}
+            />
+          </View>
         ) : (
-          <MobileTimePicker value={timeValue} onChange={onTimeChange} />
+          <MobileTimePicker
+            value={timeValue}
+            onChange={onTimeChange}
+          />
         )}
       </View>
     </View>
@@ -442,5 +455,11 @@ const styles = StyleSheet.create({
   cancelButtonText: {
     color: "#777",
     fontSize: 13,
+  },
+  webInputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    minHeight: 43,
   },
 });
