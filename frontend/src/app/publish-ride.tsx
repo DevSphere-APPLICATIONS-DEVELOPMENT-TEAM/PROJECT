@@ -17,6 +17,9 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import BackButton from "../components/BackButton";
 import DeparturePicker from "../components/DeparturePicker";
+import LocationSearch, {
+  LocationResult,
+} from "../components/LocationSearch";
 import {
   buildDepartureDate,
   isFutureDeparture,
@@ -31,15 +34,26 @@ export default function PublishRide() {
   const [driverStatus, setDriverStatus] = useState("not_registered");
   const [loading, setLoading] = useState(true);
   const [publishing, setPublishing] = useState(false);
-
   const [pickup, setPickup] = useState("");
   const [destination, setDestination] = useState("");
+
+  const [selectedPickup, setSelectedPickup] =
+    useState<LocationResult | null>(null);
+
+  const [selectedDestination, setSelectedDestination] =
+    useState<LocationResult | null>(null);
+
+  const resolveLocationText = (location: LocationResult) =>
+  location.name && location.name !== "Unknown location"
+    ? location.name
+    : location.address;
   const [depDate, setDepDate] = useState(""); // YYYY-MM-DD from picker
   const [depTime, setDepTime] = useState(""); // HH:mm from picker
   const [seats, setSeats] = useState("");
   const [cost, setCost] = useState("10.00");
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorBanner, setErrorBanner] = useState("");
+  
 
   /** Show feedback on both web (window.alert) and mobile (Alert.alert). */
   const showAlert = (title: string, message: string) => {
@@ -274,31 +288,33 @@ export default function PublishRide() {
 
         <Text style={styles.sectionTitle}>Route Information</Text>
 
-        <View style={styles.inputCard}>
-          <View style={styles.inputRow}>
-            <Text style={styles.inputIcon}>📍</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Pickup Location"
-              placeholderTextColor="#999"
-              value={pickup}
-              onChangeText={setPickup}
-            />
-          </View>
+        <LocationSearch
+          label="Pickup Location"
+          value={pickup}
+          placeholder="Search pickup location"
+          onChangeText={(text) => {
+            setPickup(text);
+            setSelectedPickup(null);
+          }}
+          onSelect={(location) => {
+            setPickup(resolveLocationText(location));
+            setSelectedPickup(location);
+          }}
+        />
 
-          <View style={styles.separator} />
-
-          <View style={styles.inputRow}>
-            <Text style={styles.inputIcon}>📍</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Destination"
-              placeholderTextColor="#999"
-              value={destination}
-              onChangeText={setDestination}
-            />
-          </View>
-        </View>
+        <LocationSearch
+          label="Destination"
+          value={destination}
+          placeholder="Search destination"
+          onChangeText={(text) => {
+            setDestination(text);
+            setSelectedDestination(null);
+          }}
+          onSelect={(location) => {
+            setDestination(resolveLocationText(location));
+            setSelectedDestination(location);
+          }}
+        />
 
         <Text style={styles.sectionTitle}>
           Departure Information
@@ -495,10 +511,12 @@ const styles = StyleSheet.create({
 
   inputCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginBottom: 2,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 15,
+    zIndex: 100,
+    elevation: 10,
+    overflow: "visible",
   },
 
   inputRow: {

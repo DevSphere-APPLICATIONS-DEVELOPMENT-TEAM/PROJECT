@@ -148,7 +148,9 @@ export default function LocationSearch({
 const styles = StyleSheet.create({
   container: {
     marginBottom: 15,
-    zIndex: 10,
+    zIndex: 100,
+    elevation: 20,
+    position: "relative",
   },
   label: {
     fontSize: 13,
