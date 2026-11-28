@@ -42,6 +42,7 @@ const publishRide = async (req, res) => {
       departureAt,
       seats,
       cost,
+      femalePassengersOnly,
     } = req.body;
 
     if (
@@ -118,6 +119,7 @@ const publishRide = async (req, res) => {
       departureAt: resolvedDepartureAt,
       seats: Number(seats),
       cost: Number(cost),
+      femalePassengersOnly: femalePassengersOnly === true,
       status: 'approved',
     });
 

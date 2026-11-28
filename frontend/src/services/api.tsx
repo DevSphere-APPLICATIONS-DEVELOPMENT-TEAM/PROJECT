@@ -10,6 +10,7 @@ export type ApprovedRide = {
   departureAt?: string | null;
   seats: number;
   cost: number;
+  femalePassengersOnly?: boolean;
   driverId: {
     name: string;
     profilePicture?: string | null;

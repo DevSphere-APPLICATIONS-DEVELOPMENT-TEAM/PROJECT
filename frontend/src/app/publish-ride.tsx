@@ -51,6 +51,7 @@ export default function PublishRide() {
   const [depTime, setDepTime] = useState(""); // HH:mm from picker
   const [seats, setSeats] = useState("");
   const [cost, setCost] = useState("10.00");
+  const [femalePassengersOnly, setFemalePassengersOnly] = useState(false);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
   const [errorBanner, setErrorBanner] = useState("");
   
@@ -174,6 +175,7 @@ export default function PublishRide() {
           departureAt: departureDateObj!.toISOString(),
           seats: Number(seats),
           cost: Number(cost),
+          femalePassengersOnly,
         }),
       });
 
@@ -358,6 +360,39 @@ export default function PublishRide() {
                 <Text style={styles.seatButtonText}>+</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+
+        <Text style={styles.sectionTitle}>Passenger Preference</Text>
+
+        <View style={styles.inputCard}>
+          <View style={styles.preferenceRow}>
+            <View style={styles.preferenceInfo}>
+              <Text style={styles.seatLabel}>Female passengers only</Text>
+              <Text style={styles.preferenceHint}>
+                Only female passengers should book this ride.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              accessibilityRole="switch"
+              accessibilityState={{ checked: femalePassengersOnly }}
+              accessibilityLabel="Female passengers only"
+              style={[
+                styles.preferenceToggle,
+                femalePassengersOnly && styles.preferenceToggleActive,
+              ]}
+              onPress={() =>
+                setFemalePassengersOnly((current) => !current)
+              }
+            >
+              <View
+                style={[
+                  styles.preferenceToggleKnob,
+                  femalePassengersOnly && styles.preferenceToggleKnobActive,
+                ]}
+              />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -570,6 +605,48 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 15,
+  },
+
+  preferenceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  preferenceInfo: {
+    flex: 1,
+    paddingRight: 12,
+  },
+
+  preferenceHint: {
+    color: "#888",
+    fontSize: 10,
+    marginTop: 4,
+  },
+
+  preferenceToggle: {
+    width: 46,
+    height: 27,
+    borderRadius: 14,
+    padding: 3,
+    justifyContent: "center",
+    backgroundColor: "#D6D6D6",
+  },
+
+  preferenceToggleActive: {
+    backgroundColor: "#FF781F",
+  },
+
+  preferenceToggleKnob: {
+    width: 21,
+    height: 21,
+    borderRadius: 11,
+    backgroundColor: "#FFFFFF",
+    alignSelf: "flex-start",
+  },
+
+  preferenceToggleKnobActive: {
+    alignSelf: "flex-end",
   },
 
   seatButton: {
