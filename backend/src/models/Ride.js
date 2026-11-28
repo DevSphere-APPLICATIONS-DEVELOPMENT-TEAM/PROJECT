@@ -47,6 +47,11 @@ const rideSchema = new mongoose.Schema(
       min: 0,
     },
 
+    femalePassengersOnly: {
+      type: Boolean,
+      default: false,
+    },
+
     status: {
       type: String,
       enum: ['pending', 'approved', 'rejected', 'completed', 'cancelled'],

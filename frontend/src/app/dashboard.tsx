@@ -20,6 +20,10 @@ export default function HomeScreen() {
   const [rides, setRides] = useState<ApprovedRide[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [femaleOnlyFilter, setFemaleOnlyFilter] = useState(false);
+  const visibleRides = femaleOnlyFilter
+    ? rides.filter((ride) => ride.femalePassengersOnly === true)
+    : rides;
 
   // Fetch all approved upcoming rides for the clean home feed
   const fetchRides = useCallback(async () => {
@@ -112,6 +116,34 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        <TouchableOpacity
+          style={[
+            styles.femaleFilterButton,
+            femaleOnlyFilter && styles.femaleFilterButtonActive,
+          ]}
+          accessibilityRole="switch"
+          accessibilityState={{ checked: femaleOnlyFilter }}
+          accessibilityLabel="Filter female passenger only rides"
+          onPress={() => setFemaleOnlyFilter((current) => !current)}
+        >
+          <View
+            style={[
+              styles.femaleFilterCheck,
+              femaleOnlyFilter && styles.femaleFilterCheckActive,
+            ]}
+          >
+            {femaleOnlyFilter && <Text style={styles.femaleFilterCheckmark}>✓</Text>}
+          </View>
+          <Text
+            style={[
+              styles.femaleFilterText,
+              femaleOnlyFilter && styles.femaleFilterTextActive,
+            ]}
+          >
+            Female passengers only
+          </Text>
+        </TouchableOpacity>
+
         {loading ? (
           <View style={styles.statusCard}>
             <ActivityIndicator size="large" color="#F28A24" />
@@ -130,16 +162,20 @@ export default function HomeScreen() {
               <Text style={styles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
-        ) : rides.length === 0 ? (
+        ) : visibleRides.length === 0 ? (
           <View style={styles.emptyCard}>
             <Text style={styles.emptyIcon}>🚘</Text>
-            <Text style={styles.emptyTitle}>No rides yet</Text>
+            <Text style={styles.emptyTitle}>
+              {femaleOnlyFilter ? "No matching rides" : "No rides yet"}
+            </Text>
             <Text style={styles.emptyDescription}>
-              Available rides will appear here when drivers publish them.
+              {femaleOnlyFilter
+                ? "No available rides have the female passenger preference enabled."
+                : "Available rides will appear here when drivers publish them."}
             </Text>
           </View>
         ) : (
-          rides.map((ride) => <RideCard key={ride._id} ride={ride} />)
+          visibleRides.map((ride) => <RideCard key={ride._id} ride={ride} />)
         )}
       </ScrollView>
 
@@ -280,6 +316,56 @@ const styles = StyleSheet.create({
     color: "#F28A24",
     fontSize: 13,
     fontWeight: "bold",
+  },
+
+  femaleFilterButton: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 22,
+    marginBottom: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#F28A24",
+    backgroundColor: "#FFFFFF",
+  },
+
+  femaleFilterButtonActive: {
+    backgroundColor: "#FFF0DD",
+  },
+
+  femaleFilterCheck: {
+    width: 16,
+    height: 16,
+    borderWidth: 1.5,
+    borderColor: "#F28A24",
+    borderRadius: 5,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+
+  femaleFilterCheckActive: {
+    backgroundColor: "#F28A24",
+  },
+
+  femaleFilterCheckmark: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    lineHeight: 13,
+    fontWeight: "bold",
+  },
+
+  femaleFilterText: {
+    color: "#B45E14",
+    fontSize: 11,
+    fontWeight: "bold",
+  },
+
+  femaleFilterTextActive: {
+    color: "#8B4A10",
   },
 
   statusCard: {
